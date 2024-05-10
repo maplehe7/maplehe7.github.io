@@ -1,13 +1,13 @@
-function sendEmail() {
-    semail = document.getElementById("email")
-    Email.send({
-        Host : "mailslurp.mx",
-        Username : "teyD3iSWrekSgbAyMFqKAztfsoQlp1Um",
-        Password : "8DcCRa9wtNo63z71PHBRpt7J2lGQF4d7",
-        To : 'maplehe7@gmail.com',
-        From : semail,
-        Subject : "donation cbccoc",
-        Body : ""
-    })
-    
-    }
+name = document.getElementById("name")
+email = document.getElementById("email")
+amount = document.getElementById("amount")
+
+function sendEmail(){
+    var link = "mailto:me@example.com"
+    + "?cc=myCCaddress@example.com"
+    + "&subject=" + encodeURIComponent("This is my subject")
+    + "&body=" + encodeURIComponent(document.getElementById("amount").value)
+;
+
+
+}
