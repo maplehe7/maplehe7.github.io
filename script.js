@@ -8,6 +8,7 @@ function sendEmail(){
     + "&subject=" + encodeURIComponent("This is my subject")
     + "&body=" + encodeURIComponent(document.getElementById("amount").value)
 ;
+window.location.href = link;
 
 
 }
