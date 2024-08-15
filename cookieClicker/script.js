@@ -1,6 +1,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics.js";
-  import {getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import {getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   // TODO: Add SDKs for Firebase products that you want to use
   // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -19,21 +19,6 @@
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth()
-var signup_button = document.getElementById("signup_button")
-
-signup_button.addEventListener("click", async () => {
-  var email = document.getElementById("user")
-  var password = document.getElementById("password")
-  createUserWithEmailAndPassword(auth, email.value, password.value).then((userCredential)=>{
-    const user = userCredential.user;
-    window.location.href= "./lol.html";
-  })
-  .catch((error) => {
-    const errorCode = error.code;
-    const errorMessage = error.message;
-    alert(errorCode,errorMessage)
-  });
-});
 var login_button = document.getElementById("button")
 login_button.addEventListener("click", async () => {
   var email = document.getElementById("user")
