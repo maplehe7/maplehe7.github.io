@@ -21,19 +21,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth()
 var button = document.getElementById("signup_button")
 const analytics = getAnalytics(app);
-// button.addEventListener("click", async () => {
-//   var email = document.getElementById("user")
-//   var password = document.getElementById("password")
-//   createUserWithEmailAndPassword(auth, email.value, password.value).then((userCredential)=>{
-//     const user = userCredential.user;
-//     window.location.href= "./lol.html";
-//   })
-//   .catch((error) => {
-//     const errorCode = error.code;
-//     const errorMessage = error.message;
-//     alert(errorCode,errorMessage)
-//   });
-// });
+button.addEventListener("click", async () => {
+  var email = document.getElementById("user")
+  var password = document.getElementById("password")
+  createUserWithEmailAndPassword(auth, email.value, password.value).then((userCredential)=>{
+    const user = userCredential.user;
+    window.location.href= "./lol.html";
+  })
+  .catch((error) => {
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    alert(errorCode,errorMessage)
+  });
+});
 var login_button = document.getElementById("button")
 login_button.addEventListener("click", async () => {
   var email = document.getElementById("user")
