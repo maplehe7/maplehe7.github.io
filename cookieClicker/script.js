@@ -1,5 +1,6 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics.js";
+  import {getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   // TODO: Add SDKs for Firebase products that you want to use
   // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -31,5 +32,5 @@ button.addEventListener(click, async () => {
     const errorCode = error.code;
     const errorMessage = error.message;
     alert(errorCode,errorMessage)
-  })
+  });
 });
