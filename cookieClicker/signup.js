@@ -20,7 +20,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth()
 var signup_button = document.getElementById("signup_button")
-signup_button.addEventListener("click", async () => {
+
+
+signup_button.addEventListener("click", signup);
+
+async function signup() {
     var email = document.getElementById("user")
     var password = document.getElementById("password")
     createUserWithEmailAndPassword(auth, email.value, password.value).then((userCredential)=>{
@@ -32,4 +36,4 @@ signup_button.addEventListener("click", async () => {
       const errorMessage = error.message;
       alert(errorCode,errorMessage)
     });
-  });
+  }
