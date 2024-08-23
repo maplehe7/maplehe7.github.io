@@ -27,6 +27,7 @@ async function login(){
   var password = document.getElementById("password")
   signInWithEmailAndPassword(auth, email.value, password.value).then((userCredential)=>{
     const user = userCredential.user;
+    sessionStorage.setItem("email",user.email)
     window.location.href= "./lol.html";
   })
   .catch((error) => {

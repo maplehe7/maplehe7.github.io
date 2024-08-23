@@ -1,4 +1,9 @@
 // For each variable, select the HTML element needed
+// import firebase from "firebase/compat/app";
+// import "firebase/firestore";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import { getFirestore,addDoc, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
 const settingsForm = document.getElementById('settings-form');
 const word= document.getElementById('word');
 const text= document.getElementById('text');
@@ -8,6 +13,32 @@ const endgameEl= document.getElementById('end-game-container');
 const highscore= document.getElementById('highscore');
 const finalScore= document.getElementById('finalscore');
 let highscorevar = localStorage.getItem("highscorevar")
+
+console.log(sessionStorage.getItem("email"))
+
+// TODO: Replace the following with your app's Firebase project configuration
+// See: https://support.google.com/firebase/answer/7015592
+const firebaseConfig = {
+      apiKey: "AIzaSyDEW3s_S7DvnHRYgeFsYaJZDPROElaqoZE",   authDomain: "login-3ca39.firebaseapp.com",   projectId: "login-3ca39",   storageBucket: "login-3ca39.appspot.com",   messagingSenderId: "1070814002897",   appId: "1:1070814002897:web:d34cacd433fd4def288ff0",   measurementId: "G-8X8JBK0VFS"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+
+// Initialize Cloud Firestore and get a reference to the service
+const db = getFirestore(app);
+async function setScore(score){
+try {
+  const docRef = await setDoc(doc(db, "scores",sessionStorage.getItem("email") ), {
+    score : score,
+  });
+
+  console.log("Document written ");
+} catch (e) {
+  console.error("Error adding document: ", e);
+}
+}
 
 if (!(typeof highscorevar !== 'undefined' && highscorevar !== null)){
   console.log("Setting high score to 0");
@@ -86,7 +117,8 @@ let hardWords = ["Pneumonoultramicroscopicsilicovolcanoconiosis", // 45 letters
 "Chlorofluoromethane", // 20 letters
 "Chlortetracycline", // 17 letters
 "Pararosaniline", // 13 letters
-"Aminomethane" // 12 letters
+"Aminomethane", // 12 letters
+"Skibidi" // 7 letters
 ]
 
 // Initialize a score and time variable
@@ -126,7 +158,7 @@ settingsForm.addEventListener('change', e => {
 
 // Create a function that displays a random word to the webpage. Use the 'randomWord' variable to store to word.
 function addWordToDOM() {
-  randomWord1 = getRandomWord();
+  let randomWord1 = getRandomWord();
   randomWord = "The" + " " + randomWord1 + " " + getRandomVerb() + "."
   document.getElementById('word').textContent = randomWord;
 }
@@ -141,13 +173,11 @@ function updateScore() {
 function gameOver() {
   endgameEl.style.display = "block"
   finalScore.textContent= "Final Score: "+ score
-  console.log("b4 if");
+
   if (score > Number(highscorevar)){
-    console.log("in if");
+  
     highscorevar = score
-    highscoreString = highscorevar.toString()
-    localStorage.setItem("highscorevar", highscoreString)
-    highscore.textContent = "High Score: "+ highscorevar
+    setScore(highscorevar)
   }
   else{
 
@@ -188,7 +218,7 @@ text.addEventListener("input", (e) => {
     e.target.value = ""
 
     if(difficulty === 'hard') {
-      time += 15;
+      time = 5;
 
     } else if(difficulty === 'medium') {
       time += 8;
