@@ -2,7 +2,7 @@
 // import firebase from "firebase/compat/app";
 // import "firebase/firestore";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getFirestore,addDoc, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getFirestore,addDoc, collection, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
 const settingsForm = document.getElementById('settings-form');
 const word= document.getElementById('word');
@@ -36,14 +36,25 @@ try {
 
   console.log("Document written ");
 } catch (e) {
-  console.error("Error adding document: ", e);
+  console.error("Error adding document: ", );
 }
+}
+const docRef = doc(db, "scores", sessionStorage.getItem("email"));
+const docSnap = await getDoc(docRef);
+
+if (docSnap.exists()) {
+  console.log("Document data:", docSnap.data());
+} else {
+  // docSnap.data() will be undefined in this case
+  console.log("No such document!");
 }
 
 if (!(typeof highscorevar !== 'undefined' && highscorevar !== null)){
   console.log("Setting high score to 0");
   highscorevar = "0"
 }
+
+
 
 if(highscorevar.toString() == "function toString() { [native code] }"){
   console.log("Equals function");
@@ -168,6 +179,8 @@ function updateScore() {
   score++;
   scoreEl.textContent = "Score: "+score
 }
+
+
 
 // Create a function to display the score and game over screen.
 function gameOver() {
