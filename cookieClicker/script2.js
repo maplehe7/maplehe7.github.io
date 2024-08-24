@@ -12,7 +12,7 @@ const timeEl= document.getElementById('time-container');
 const endgameEl= document.getElementById('end-game-container');
 const highscore= document.getElementById('highscore');
 const finalScore= document.getElementById('finalscore');
-let highscorevar = localStorage.getItem("highscorevar")
+let highscorevar = hi()
 
 console.log(sessionStorage.getItem("email"))
 
@@ -39,14 +39,16 @@ try {
   console.error("Error adding document: ", );
 }
 }
+
+function hi(){
 const docRef = doc(db, "scores", sessionStorage.getItem("email"));
 const docSnap = await getDoc(docRef);
-
 if (docSnap.exists()) {
-  console.log("Document data:", docSnap.data().score);
+  return docSnap.data().score;
 } else {
   // docSnap.data() will be undefined in this case
   console.log("No such document!");
+}
 }
 
 if (!(typeof highscorevar !== 'undefined' && highscorevar !== null)){
@@ -191,6 +193,7 @@ function gameOver() {
   
     highscorevar = score
     setScore(highscorevar)
+
   }
   else{
 
