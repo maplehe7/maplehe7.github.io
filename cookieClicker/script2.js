@@ -2,7 +2,7 @@
 // import firebase from "firebase/compat/app";
 // import "firebase/firestore";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getFirestore,addDoc, collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getFirestore,addDoc, collection, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
 const settingsForm = document.getElementById('settings-form');
 const word= document.getElementById('word');
@@ -12,7 +12,7 @@ const timeEl= document.getElementById('time-container');
 const endgameEl= document.getElementById('end-game-container');
 const highscore= document.getElementById('highscore');
 const finalScore= document.getElementById('finalscore');
-let highscorevar = localStorage.getItem("highscorevar")
+let highscorevar = hi()
 
 console.log(sessionStorage.getItem("email"))
 
@@ -36,7 +36,18 @@ try {
 
   console.log("Document written ");
 } catch (e) {
-  console.error("Error adding document: ", e);
+  console.error("Error adding document: ", );
+}
+}
+
+function hi(){
+const docRef = doc(db, "scores", sessionStorage.getItem("email"));
+const docSnap = await getDoc(docRef);
+if (docSnap.exists()) {
+  return docSnap.data().score;
+} else {
+  // docSnap.data() will be undefined in this case
+  console.log("No such document!");
 }
 }
 
@@ -44,6 +55,8 @@ if (!(typeof highscorevar !== 'undefined' && highscorevar !== null)){
   console.log("Setting high score to 0");
   highscorevar = "0"
 }
+
+
 
 if(highscorevar.toString() == "function toString() { [native code] }"){
   console.log("Equals function");
@@ -169,6 +182,8 @@ function updateScore() {
   scoreEl.textContent = "Score: "+score
 }
 
+
+
 // Create a function to display the score and game over screen.
 function gameOver() {
   endgameEl.style.display = "block"
@@ -178,6 +193,7 @@ function gameOver() {
   
     highscorevar = score
     setScore(highscorevar)
+
   }
   else{
 
