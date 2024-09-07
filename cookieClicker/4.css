@@ -11,7 +11,9 @@
     margin: 0;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
   }
-  
+  .row{
+    background-color: antiquewhite;
+  }
   select {
     width: 200px;
     padding: 5px;

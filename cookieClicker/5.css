@@ -1,7 +1,144 @@
 * {
     box-sizing: border-box;
   }
+
   
+  .row {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 40px;
+    border-bottom: 1px solid #AFAFAF;
+    background-color: #FFD700;
+    border-radius: 4px 4px 0 0; 
+
+  }
+  .row2 {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 40px;
+    border-bottom: 1px solid #AFAFAF;
+    background-color:  #C0C0C0;
+    
+
+  }
+  .row3 {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 40px;
+    border-bottom: 1px solid #AFAFAF;
+    background-color:  #CD7F32;
+    
+
+  }
+  .row4 {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 40px;
+    border-bottom: 1px solid #AFAFAF;
+  
+   
+
+  }
+  button{
+    
+    font-weight: 400;
+    font-style: normal;
+    background-color: white;
+    border-radius: 5px;
+    font-size: 20px;
+    width: 120px;
+  
+    padding: 0;
+  }
+  button:active {
+    background-color: #63a2ff82;
+  }
+  .row5 {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 40px;
+   
+  
+    
+
+  }
+ 
+  .name {
+    position: relative;
+    display: inline-block;
+    width: 75%;
+    line-height: 45px;
+    color: black;
+    
+  }
+  .name2 {
+    position: relative;
+    display: inline-block;
+    width: 75%;
+    line-height: 45px;
+    color: black;
+    
+  }
+  .name3 {
+    position: relative;
+    display: inline-block;
+    width: 75%;
+    line-height: 45px;
+    color: black;
+    
+  }
+  .name4 {
+    position: relative;
+    display: inline-block;
+    width: 75%;
+    line-height: 45px;
+    color: black;
+    
+  }
+  .name5 {
+    position: relative;
+    display: inline-block;
+    width: 75%;
+    line-height: 45px;
+    color: black;
+    
+  }
+  
+  .score {
+    position: relative;
+    display: inline-block;
+    width: 25%;
+    color: black;
+  }
+  .score2 {
+    position: relative;
+    display: inline-block;
+    width: 25%;
+    color: black;
+  }
+  .score3 {
+    position: relative;
+    display: inline-block;
+    width: 25%;
+    color: black;
+  }
+  .score4 {
+    position: relative;
+    display: inline-block;
+    width: 25%;
+    color: black;
+  }
+  .score5 {
+    position: relative;
+    display: inline-block;
+    width: 25%;
+    color: black;
+  }
   body {
     background-color: #007cf990;
     display: block;

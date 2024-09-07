@@ -2,7 +2,23 @@
 // import firebase from "firebase/compat/app";
 // import "firebase/firestore";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getFirestore,addDoc, collection, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getFirestore,addDoc, collection, setDoc, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyDEW3s_S7DvnHRYgeFsYaJZDPROElaqoZE",
+  authDomain: "login-3ca39.firebaseapp.com",
+  projectId: "login-3ca39",
+  storageBucket: "login-3ca39.appspot.com",
+  messagingSenderId: "1070814002897",
+  appId: "1:1070814002897:web:d34cacd433fd4def288ff0",
+  measurementId: "G-8X8JBK0VFS"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+
+// Initialize Cloud Firestore and get a reference to the service
+const db = getFirestore(app);
 
 const settingsForm = document.getElementById('settings-form');
 const word= document.getElementById('word');
@@ -14,20 +30,14 @@ const highscore= document.getElementById('highscore');
 const finalScore= document.getElementById('finalscore');
 let highscorevar = hi()
 
+console.log(settingsForm);
+
 console.log(sessionStorage.getItem("email"))
 
 // TODO: Replace the following with your app's Firebase project configuration
 // See: https://support.google.com/firebase/answer/7015592
-const firebaseConfig = {
-      apiKey: "AIzaSyDEW3s_S7DvnHRYgeFsYaJZDPROElaqoZE",   authDomain: "login-3ca39.firebaseapp.com",   projectId: "login-3ca39",   storageBucket: "login-3ca39.appspot.com",   messagingSenderId: "1070814002897",   appId: "1:1070814002897:web:d34cacd433fd4def288ff0",   measurementId: "G-8X8JBK0VFS"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
 
 
-// Initialize Cloud Firestore and get a reference to the service
-const db = getFirestore(app);
 async function setScore(score){
 try {
   const docRef = await setDoc(doc(db, "scores",sessionStorage.getItem("email") ), {
@@ -40,7 +50,7 @@ try {
 }
 }
 
-function hi(){
+async function hi(){
 const docRef = doc(db, "scores", sessionStorage.getItem("email"));
 const docSnap = await getDoc(docRef);
 if (docSnap.exists()) {
@@ -142,7 +152,7 @@ let time = 10;
 let randomWord;
 
 // Focuses on the input box
-text.focus();
+// text.focus();
 
 // getRandomWord() Function: returns random word from array when called
 function getRandomWord() {
@@ -245,3 +255,10 @@ text.addEventListener("input", (e) => {
     updateTime()
   }
 });
+async function getScoreboard(){
+  const querySnapshot = await getDocs(collection(db, "scores"));
+querySnapshot.forEach((doc) => {
+  // doc.data() is never undefined for query doc snapshots
+  console.log(doc.id, " => ", doc.data());
+});
+}
