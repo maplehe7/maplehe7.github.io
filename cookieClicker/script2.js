@@ -28,7 +28,9 @@ const timeEl= document.getElementById('time-container');
 const endgameEl= document.getElementById('end-game-container');
 const highscore= document.getElementById('highscore');
 const finalScore= document.getElementById('finalscore');
-let highscorevar = hi()
+var highscorevar = 0
+
+await hi()
 
 console.log(settingsForm);
 
@@ -51,14 +53,23 @@ try {
 }
 
 async function hi(){
+  console.log("hi")
 const docRef = doc(db, "scores", sessionStorage.getItem("email"));
+console.log(docRef)
+
 const docSnap = await getDoc(docRef);
 if (docSnap.exists()) {
-  return docSnap.data().score;
+  console.log("got doc")
+  var test =  docSnap.data().score;
+  highscorevar = test
+  return test
 } else {
   // docSnap.data() will be undefined in this case
   console.log("No such document!");
+  await setDoc(docRef, {score: 0})
 }
+highscorevar = 0
+return 0
 }
 
 if (!(typeof highscorevar !== 'undefined' && highscorevar !== null)){

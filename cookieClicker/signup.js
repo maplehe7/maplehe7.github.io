@@ -29,6 +29,7 @@ async function signup() {
     var password = document.getElementById("password")
     createUserWithEmailAndPassword(auth, email.value, password.value).then((userCredential)=>{
       const user = userCredential.user;
+      sessionStorage.setItem("email",user.email)
       window.location.href= "./lol.html";
     })
     .catch((error) => {

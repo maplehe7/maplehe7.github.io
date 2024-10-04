@@ -24,16 +24,23 @@ var Scoreboard = document.getElementById("container")
 async function getScoreboard(){
   Scoreboard.innerHTML = "";
   const querySnapshot = await getDocs(collection(db, "scores"));
-querySnapshot.forEach((doc) => {
+  var sortedScores = [];
+querySnapshot.forEach((item) => {
   // doc.data() is never undefined for query doc snapshots
-  console.log(doc.id, " => ", doc.data()["score"]);
-  Scoreboard.innerHTML += `<div class="row">
-            <div class="name">${doc.id.split("@")[0]}</div><div class="score">${doc.data()["score"]}</div>
-        </div>`
-  // document.getElementsByClassName('name').textContent = doc.id
-  // document.getElementsByClassName('score').textContent = doc.data()["score"]
-  
+  sortedScores.push({name: item.id, score: item.data()["score"]})
 });
+  // console.log(sortedScores);
+  sortedScores.sort((a,b) => b.score - a.score);
+
+  for(let i = 0; i < sortedScores.length; i++){
+  Scoreboard.innerHTML += `<div class="row${i+1}">
+            <div class="name">${sortedScores[i].name.split("@")[0]}</div><div class="score">${sortedScores[i].score}</div>
+        </div>`
+  }
+        // console.log(sortedScores)
+ 
+  
+
 }
 
 await getScoreboard()
