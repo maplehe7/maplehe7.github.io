@@ -232,7 +232,7 @@ settingsForm.addEventListener('change', e => {
 // Create a function that displays a random word to the webpage. Use the 'randomWord' variable to store to word.
 function addWordToDOM() {
   let randomWord1 = getRandomWord();
-  randomWord = "The" + " " + randomWord1 + " " + getRandomVerb() + ", " + getRandomAdverb() + " " + getRandomAdjective()
+  randomWord = "The" + " " + randomWord1 + " " + getRandomVerb() + ", " + getRandomAdverb() + " " + getRandomAdjective() + "."
   document.getElementById('word').textContent = randomWord;
 }
 
