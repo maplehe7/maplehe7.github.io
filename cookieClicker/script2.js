@@ -258,7 +258,7 @@ function updateScore() {
 // Create a function to display the score and game over screen.
 function gameOver() {
   endgameEl.style.display = "block"
-  finalScore.textContent= "Final Score: "+ score
+  finalScore.textContent= "Final Score: "+ (score+1)
 
   if (score > Number(highscorevar)){
   
