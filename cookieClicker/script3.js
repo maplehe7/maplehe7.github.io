@@ -33,10 +33,22 @@ querySnapshot.forEach((item) => {
   sortedScores.sort((a,b) => b.score - a.score);
 
   for(let i = 0; i < sortedScores.length; i++){
+    if(i==sortedScores.length-1){
+      Scoreboard.innerHTML += `<div class="row5">
+            <div class="name">${sortedScores[i].name.split("@")[0]}</div><div class="score">${sortedScores[i].score}</div>
+        </div>`
+    }
+    else if (i>= 4){
+      Scoreboard.innerHTML += `<div class="row4">
+            <div class="name">${sortedScores[i].name.split("@")[0]}</div><div class="score">${sortedScores[i].score}</div>
+        </div>`
+    }
+    else{
   Scoreboard.innerHTML += `<div class="row${i+1}">
             <div class="name">${sortedScores[i].name.split("@")[0]}</div><div class="score">${sortedScores[i].score}</div>
         </div>`
   }
+}
         // console.log(sortedScores)
  
   
