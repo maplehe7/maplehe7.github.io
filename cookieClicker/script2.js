@@ -305,12 +305,12 @@ text.addEventListener("input", (e) => {
     e.target.value = ""
 
     if(difficulty === 'hard') {
-      time = 5;
+      time = 10;
 
     } else if(difficulty === 'medium') {
-      time += 8;
+      time += 13;
     } else {
-      time += 10;
+      time += 15;
     }
 
     updateTime()
