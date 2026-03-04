@@ -6,130 +6,74 @@
 <title>Chat</title>
 
 <style>
-
-/* Import modern font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-
-*{
-  box-sizing:border-box;
-}
 
 body{
   margin:0;
   font-family:'Inter',sans-serif;
-  background:linear-gradient(135deg,#0f172a,#1e293b);
+  background:transparent;
   display:flex;
   justify-content:center;
   color:white;
 }
 
-/* Layout */
 .container{
   width:100%;
   max-width:900px;
-  margin:30px;
+  margin:25px;
   display:flex;
   gap:18px;
 }
 
 .card{
   background:rgba(30,41,59,0.9);
-  backdrop-filter:blur(10px);
-  border-radius:16px;
-  padding:18px;
-  box-shadow:0 15px 40px rgba(0,0,0,.35);
+  backdrop-filter:blur(8px);
+  border-radius:14px;
+  padding:16px;
+  box-shadow:0 10px 25px rgba(0,0,0,.3);
 }
 
-/* Login card */
-#login{
-  max-width:420px;
-  margin:auto;
-}
-
-/* Inputs */
 input,textarea{
   width:100%;
-  padding:10px 12px;
-  margin:8px 0;
+  padding:8px 10px;
+  margin:6px 0;
   border:none;
-  border-radius:10px;
+  border-radius:8px;
   background:#0f172a;
   color:white;
   font-size:14px;
-  font-family:'Inter',sans-serif;
-  outline:none;
-  transition:0.2s;
 }
 
-input:focus,textarea:focus{
-  background:#111c2e;
-}
-
-/* Textarea */
 textarea{
   height:55px;
   resize:none;
 }
 
-/* Buttons */
 button{
-  padding:6px 12px;
+  padding:5px 10px;
   border:none;
-  border-radius:8px;
-  font-size:13px;
-  font-weight:500;
+  border-radius:6px;
+  font-size:12px;
   cursor:pointer;
-  transition:0.2s;
+  margin-top:4px;
 }
 
-.primary{
-  background:#38bdf8;
-  color:#0f172a;
-}
+.primary{background:#38bdf8;color:#0f172a}
+.danger{background:#ef4444;color:white}
+.adminBtn{background:#facc15;color:black}
 
-.primary:hover{
-  background:#0ea5e9;
-}
-
-.adminBtn{
-  background:#facc15;
-  color:#1e293b;
-}
-
-.adminBtn:hover{
-  background:#eab308;
-}
-
-.danger{
-  background:#ef4444;
-  color:white;
-}
-
-.danger:hover{
-  background:#dc2626;
-}
-
-/* Messages */
 #messages{
   height:420px;
   overflow-y:auto;
-  margin:15px 0;
-  padding-right:5px;
+  margin:10px 0;
 }
 
 .message{
   background:#1e293b;
-  padding:10px 12px;
-  border-radius:12px;
-  margin-bottom:8px;
+  padding:8px 10px;
+  border-radius:10px;
+  margin-bottom:6px;
   font-size:14px;
-  line-height:1.4;
-  box-shadow:0 4px 10px rgba(0,0,0,.25);
-  transition:0.15s;
-}
-
-.message:hover{
-  background:#22304a;
 }
 
 .meta{
@@ -137,51 +81,14 @@ button{
   justify-content:space-between;
   font-size:11px;
   margin-bottom:4px;
-  opacity:.85;
 }
 
-.meta strong{
-  font-weight:600;
-}
-
-.time{
-  opacity:.6;
-  font-size:10px;
-}
-
-/* Status colors */
-.verified{
-  color:#22c55e;
-  font-weight:500;
-}
-
-.unverified{
-  color:#94a3b8;
-}
-
-.loggedout{
-  font-size:11px;
-  opacity:.7;
-  margin-bottom:3px;
-}
-
-/* Admin sections */
-.sectionTitle{
-  font-size:13px;
-  font-weight:600;
-  margin:12px 0 6px 0;
-  opacity:.8;
-}
-
-.userRow{
-  background:#0f172a;
-  padding:8px;
-  border-radius:8px;
-  margin-bottom:6px;
-  font-size:12px;
-}
-
-</style></head>
+.verified{color:#22c55e;margin-left:4px}
+.unverified{color:#94a3b8;margin-left:4px}
+.sectionTitle{font-size:13px;font-weight:600;margin-top:12px;margin-bottom:5px}
+.loggedout{font-size:11px;opacity:.7}
+</style>
+</head>
 <body>
 
 <div id="login" class="card" style="max-width:400px;margin:auto;">
@@ -214,12 +121,12 @@ button{
 <script type="module">
 
 const firebaseConfig = {
-  apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
-  authDomain: "darkchatroom-4b547.firebaseapp.com",
-  projectId: "darkchatroom-4b547",
-  storageBucket: "darkchatroom-4b547.firebasestorage.app",
-  messagingSenderId: "764781101022",
-  appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f"
+  apiKey: "YOUR KEY",
+  authDomain: "YOUR DOMAIN",
+  projectId: "YOUR PROJECT ID",
+  storageBucket: "YOUR BUCKET",
+  messagingSenderId: "YOUR SENDER",
+  appId: "YOUR APP ID"
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -243,6 +150,8 @@ onAuthStateChanged(auth,async(user)=>{
     chatUI.style.display="none";
     return;
   }
+
+  localStorage.setItem("uid",user.uid);
 
   const snap=await getDoc(doc(db,"users",user.uid));
   if(!snap.exists()) return;
@@ -268,18 +177,18 @@ window.createAccount=async function(){
 
   const fullName=(first+" "+last).trim().toLowerCase();
 
-  const existing=await getDocs(collection(db,"users"));
+  const usersSnap=await getDocs(collection(db,"users"));
   let taken=false;
-  existing.forEach(docSnap=>{
-    const u=docSnap.data();
+  usersSnap.forEach(d=>{
+    const u=d.data();
     const name=(u.firstName+" "+(u.lastName||"")).trim().toLowerCase();
     if(name===fullName) taken=true;
   });
+
   if(taken) return alert("Name already taken");
 
   const res=await signInAnonymously(auth);
   const uid=res.user.uid;
-  localStorage.setItem("uid",uid);
 
   await setDoc(doc(db,"users",uid),{
     uid,firstName:first,lastName:last,
@@ -289,7 +198,7 @@ window.createAccount=async function(){
   });
 };
 
-/* START APP */
+/* START */
 function startApp(user){
 
 updateProfile();
@@ -312,94 +221,86 @@ onSnapshot(q,(snap)=>{
     const time=d.createdAt?.toDate?
       new Date(d.createdAt.toDate()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
       :"";
+
     messages.innerHTML+=`
     <div class="message">
       <div class="meta">
         <div>
-          <strong>
-            ${d.firstName}
-            ${d.verified 
-              ? '<span class="verified">✓ Verified</span>' 
-              : '<span class="unverified">(Unverified)</span>'}
-          </strong>
+          <strong>${d.firstName}</strong>
+          ${d.verified
+            ?'<span class="verified">✓</span>'
+            :'<span class="unverified">(Unverified)</span>'}
         </div>
         <div>${time}</div>
       </div>
       ${d.text}
-      ${currentUserData.isAdmin?`<br>
-        <button class="danger" onclick="deleteMessage('${docSnap.id}')">Delete</button>`:""}
+      ${currentUserData.isAdmin?
+      `<br><button class="danger" onclick="deleteMessage('${docSnap.id}')">Delete</button>`:""}
     </div>`;
   });
 });
 
 /* ADMIN PANEL */
 if(currentUserData.isAdmin){
-  adminPanel.style.display="block";
+adminPanel.style.display="block";
 
-  onSnapshot(collection(db,"users"),(snap)=>{
-    loggedInUsers.innerHTML="";
-    loggedOutUsers.innerHTML="";
-    snap.forEach(docSnap=>{
-      const u=docSnap.data();
-      const html=`
-      <div style="margin-bottom:4px;font-size:12px">
-        ${u.firstName} ${u.lastName||""}
-        ${u.banned?"(Banned)":""}
-        <br>
-        <button class="adminBtn"
-        onclick="verifyUser('${u.uid}',${!u.verified})">
-        ${u.verified?"Unverify":"Verify"}
-        </button>
-        <button class="danger"
-        onclick="banUser('${u.uid}',${!u.banned})">
-        ${u.banned?"Unban":"Ban"}
-        </button>
-        <button class="danger"
-        onclick="forceLogout('${u.uid}')">
-        Force Logout
-        </button>
-      </div>`;
+onSnapshot(collection(db,"users"),(snap)=>{
+loggedInUsers.innerHTML="";
+loggedOutUsers.innerHTML="";
+snap.forEach(d=>{
+const u=d.data();
 
-      if(u.loggedOut)
-        loggedOutUsers.innerHTML+=
-          `<div class="loggedout">${u.firstName}</div>`;
-      else
-        loggedInUsers.innerHTML+=html;
-    });
-  });
+if(u.loggedOut){
+loggedOutUsers.innerHTML+=`<div class="loggedout">${u.firstName}</div>`;
+}else{
+loggedInUsers.innerHTML+=`
+<div style="margin-bottom:6px;font-size:12px">
+${u.firstName} ${u.lastName||""}
+<br>
+<button class="adminBtn" onclick="verifyUser('${u.uid}',${!u.verified})">
+${u.verified?"Unverify":"Verify"}
+</button>
+<button class="danger" onclick="banUser('${u.uid}',${!u.banned})">
+${u.banned?"Unban":"Ban"}
+</button>
+<button class="danger" onclick="forceLogout('${u.uid}')">
+Force Logout
+</button>
+</div>`;
 }
+});
+});
 }
 
-/* PROFILE */
+}
+
 function updateProfile(){
 profile.innerHTML=
 `<strong>${currentUserData.firstName}</strong>
 <br>Status: ${currentUserData.verified?"Verified":"Unverified"}`;
 }
 
-/* SEND MESSAGE */
 window.sendMessage=async function(){
 const text=messageInput.value.trim();
 if(!text) return;
 
 await addDoc(collection(db,"messages"),{
-  uid:currentUserData.uid,
-  firstName:currentUserData.firstName,
-  lastName:currentUserData.lastName,
-  verified:currentUserData.verified,
-  text,
-  createdAt:serverTimestamp()
+uid:currentUserData.uid,
+firstName:currentUserData.firstName,
+lastName:currentUserData.lastName,
+verified:currentUserData.verified,
+text,
+createdAt:serverTimestamp()
 });
 messageInput.value="";
 };
 
-/* ADMIN ACTIONS */
 window.deleteMessage=id=>deleteDoc(doc(db,"messages",id));
 window.verifyUser=(uid,val)=>updateDoc(doc(db,"users",uid),{verified:val});
 window.forceLogout=uid=>updateDoc(doc(db,"users",uid),{loggedOut:true});
 window.banUser=async(uid,val)=>{
-  await updateDoc(doc(db,"users",uid),{banned:val});
-  if(val) await updateDoc(doc(db,"users",uid),{loggedOut:true});
+await updateDoc(doc(db,"users",uid),{banned:val});
+if(val) await updateDoc(doc(db,"users",uid),{loggedOut:true});
 };
 
 </script>
