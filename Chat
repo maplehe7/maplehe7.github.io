@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Chat</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Segoe UI, sans-serif;
+  background:transparent;
+  display:flex;
+  justify-content:center;
+}
+.container{
+  width:100%;
+  max-width:900px;
+  margin:30px;
+  display:flex;
+  gap:20px;
+}
+.card{
+  background:rgba(30,41,59,0.95);
+  backdrop-filter:blur(8px);
+  border-radius:14px;
+  padding:20px;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);
+  color:white;
+}
+#login{max-width:400px;margin:auto}
+input,textarea{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border:none;
+  border-radius:8px;
+  background:#0f172a;
+  color:white;
+}
+textarea{resize:none}
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+}
+.primary{background:#06b6d4;color:black}
+.adminBtn{background:#f59e0b}
+.danger{background:#ef4444;color:white}
+#messages{
+  height:420px;
+  overflow-y:auto;
+  margin:15px 0;
+}
+.message{
+  background:#334155;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+.meta{
+  font-size:13px;
+  margin-bottom:6px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.verified{color:#10b981;font-weight:600}
+.unverified{color:#cbd5e1}
+.time{
+  font-size:12px;
+  opacity:0.7;
+}
+.userRow{
+  background:#334155;
+  padding:8px;
+  border-radius:8px;
+  margin-bottom:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="login" class="card">
+  <h2>Create Account</h2>
+  <input id="firstName" placeholder="First name (required)">
+  <input id="lastName" placeholder="Last name (optional)">
+  <button class="primary" onclick="createAccount()">Create Account</button>
+</div>
+
+<div id="chatUI" style="display:none;width:100%;">
+  <div class="container">
+
+    <div class="card" style="flex:2;">
+      <div id="profile"></div>
+      <div id="messages"></div>
+      <textarea id="messageInput" rows="2" placeholder="Type a message..."></textarea>
+      <button class="primary" onclick="sendMessage()">Send</button>
+    </div>
+
+    <div id="adminPanel" class="card" style="flex:1;display:none;">
+      <h3>Admin Panel</h3>
+      <div id="users"></div>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
+  authDomain: "darkchatroom-4b547.firebaseapp.com",
+  projectId: "darkchatroom-4b547",
+  storageBucket: "darkchatroom-4b547.firebasestorage.app",
+  messagingSenderId: "764781101022",
+  appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f",
+  measurementId: "G-31LH8LEQ89"
+};
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut }
+from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc, updateDoc,
+  collection, addDoc, query, orderBy, onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getFirestore();
+let currentUserData=null;
+
+window.createAccount = async function(){
+  const first=firstName.value.trim();
+  const last=lastName.value.trim();
+  if(!first) return alert("First name required");
+
+  const res=await signInAnonymously(auth);
+  const uid=res.user.uid;
+  localStorage.setItem("uid",uid);
+
+  await setDoc(doc(db,"users",uid),{
+    uid,firstName:first,lastName:last,
+    isAdmin:false,verified:false,forceLogout:false,
+    createdAt:serverTimestamp()
+  });
+};
+
+onAuthStateChanged(auth,async(user)=>{
+  if(!user)return;
+  const snap=await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists())return;
+  currentUserData=snap.data();
+  startApp(user);
+});
+
+function startApp(user){
+  login.style.display="none";
+  chatUI.style.display="block";
+  updateProfile();
+
+  onSnapshot(doc(db,"users",user.uid),(snap)=>{
+    currentUserData=snap.data();
+    updateProfile();
+    if(currentUserData.forceLogout){
+      alert("You were logged out by admin.");
+      signOut(auth);
+      localStorage.removeItem("uid");
+      location.reload();
+    }
+  });
+
+  const q=query(collection(db,"messages"),orderBy("createdAt"));
+  onSnapshot(q,(snap)=>{
+    messages.innerHTML="";
+    snap.forEach(docSnap=>{
+      const d=docSnap.data();
+      const time = d.createdAt?.toDate ?
+        new Date(d.createdAt.toDate()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) :
+        "";
+
+      messages.innerHTML+=`
+        <div class="message">
+          <div class="meta">
+            <div>
+              <strong>${d.firstName} ${d.lastName||""}</strong>
+              <span class="${d.verified?'verified':'unverified'}">
+                ${d.verified?'✓ Verified':'Unverified'}
+              </span>
+            </div>
+            <div class="time">${time}</div>
+          </div>
+          ${d.text}
+        </div>
+      `;
+    });
+    messages.scrollTop=messages.scrollHeight;
+  });
+
+  if(currentUserData.isAdmin)loadAdminPanel();
+}
+
+function updateProfile(){
+  profile.innerHTML=`
+    <strong>${currentUserData.firstName} ${currentUserData.lastName||""}</strong><br>
+    Status: ${currentUserData.verified?'Verified':'Unverified'}
+  `;
+  adminPanel.style.display=currentUserData.isAdmin?"block":"none";
+}
+
+window.sendMessage=async function(){
+  const text=messageInput.value.trim();
+  if(!text)return;
+
+  await addDoc(collection(db,"messages"),{
+    uid:currentUserData.uid,
+    firstName:currentUserData.firstName,
+    lastName:currentUserData.lastName,
+    verified:currentUserData.verified,
+    text,
+    createdAt:serverTimestamp()
+  });
+
+  messageInput.value="";
+};
+
+function loadAdminPanel(){
+  onSnapshot(collection(db,"users"),(snap)=>{
+    users.innerHTML="";
+    snap.forEach(docSnap=>{
+      const u=docSnap.data();
+      users.innerHTML+=`
+        <div class="userRow">
+          ${u.firstName} ${u.lastName||""}
+          (${u.verified?'Verified':'Unverified'})<br>
+          <button class="adminBtn"
+            onclick="verifyUser('${u.uid}',${!u.verified})">
+            ${u.verified?'Unverify':'Verify'}
+          </button>
+          <button class="danger"
+            onclick="forceLogout('${u.uid}')">
+            Force Logout
+          </button>
+        </div>
+      `;
+    });
+  });
+}
+
+window.verifyUser=async(uid,val)=>{
+  await updateDoc(doc(db,"users",uid),{verified:val});
+};
+
+window.forceLogout=async(uid)=>{
+  await updateDoc(doc(db,"users",uid),{forceLogout:true});
+};
+
+</script>
+</body>
+</html>
