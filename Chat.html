@@ -6,145 +6,49 @@
 <title>Chat</title>
 
 <style>
-*{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:Segoe UI, sans-serif;
-  background:transparent;
-  display:flex;
-  justify-content:center;
-}
-
-.container{
-  width:100%;
-  max-width:850px;
-  margin:20px;
-  display:flex;
-  gap:15px;
-}
-
-.card{
-  background:rgba(30,41,59,0.95);
-  backdrop-filter:blur(8px);
-  border-radius:10px;
-  padding:14px;
-  box-shadow:0 6px 15px rgba(0,0,0,.25);
-  color:white;
-}
-
-/* Inputs */
-input,textarea{
-  width:100%;
-  padding:8px;
-  margin:6px 0;
-  border:none;
-  border-radius:6px;
-  background:#0f172a;
-  color:white;
-  font-size:14px;
-}
-
-textarea{
-  resize:none;
-  height:50px;
-}
-
-/* Buttons */
-button{
-  padding:5px 8px;
-  border:none;
-  border-radius:5px;
-  cursor:pointer;
-  font-weight:600;
-  font-size:12px;
-  margin-top:4px;
-}
-
+body{margin:0;font-family:Segoe UI;background:transparent;display:flex;justify-content:center}
+.container{width:100%;max-width:850px;margin:20px;display:flex;gap:15px}
+.card{background:#1e293b;border-radius:10px;padding:14px;color:white}
+input,textarea{width:100%;padding:8px;margin:6px 0;border:none;border-radius:6px;background:#0f172a;color:white;font-size:14px}
+textarea{height:50px;resize:none}
+button{padding:4px 8px;border:none;border-radius:5px;font-size:11px;margin-top:4px;cursor:pointer}
 .primary{background:#06b6d4;color:black}
-.adminBtn{background:#f59e0b}
 .danger{background:#ef4444;color:white}
-
-/* Messages */
-#messages{
-  height:380px;
-  overflow-y:auto;
-  margin:10px 0;
-}
-
-.message{
-  background:#334155;
-  padding:8px 10px;
-  border-radius:8px;
-  margin-bottom:6px;
-  font-size:14px;
-  line-height:1.3;
-}
-
-.meta{
-  font-size:11px;
-  margin-bottom:4px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.verified{
-  color:#10b981;
-  font-weight:600;
-  font-size:11px;
-}
-
-.unverified{
-  color:#cbd5e1;
-  font-size:11px;
-}
-
-.loggedout{
-  color:#ef4444;
-  font-size:11px;
-}
-
-.time{
-  font-size:10px;
-  opacity:0.7;
-}
-
-/* Admin users */
-.userRow{
-  background:#334155;
-  padding:6px;
-  border-radius:6px;
-  margin-bottom:6px;
-  font-size:12px;
-}
+.adminBtn{background:#f59e0b}
+#messages{height:380px;overflow-y:auto;margin:10px 0}
+.message{background:#334155;padding:6px;border-radius:6px;margin-bottom:5px;font-size:13px}
+.meta{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px}
+.loggedout{font-size:11px;opacity:.7}
+.sectionTitle{font-size:13px;margin-top:10px;margin-bottom:4px;font-weight:bold}
 </style>
 </head>
 <body>
 
 <div id="login" class="card" style="max-width:400px;margin:auto;">
-  <h2>Create Account</h2>
-  <input id="firstName" placeholder="First name (required)">
-  <input id="lastName" placeholder="Last name (optional)">
-  <button class="primary" onclick="createAccount()">Create Account</button>
+<h3>Create Account</h3>
+<input id="firstName" placeholder="First name (required)">
+<input id="lastName" placeholder="Last name (optional)">
+<button class="primary" onclick="createAccount()">Create</button>
 </div>
 
 <div id="chatUI" style="display:none;width:100%;">
-  <div class="container">
+<div class="container">
 
-    <div class="card" style="flex:2;">
-      <div id="profile"></div>
-      <div id="messages"></div>
-      <textarea id="messageInput" rows="2" placeholder="Type a message..."></textarea>
-      <button class="primary" onclick="sendMessage()">Send</button>
-    </div>
+<div class="card" style="flex:2;">
+<div id="profile"></div>
+<div id="messages"></div>
+<textarea id="messageInput" placeholder="Type message..."></textarea>
+<button class="primary" onclick="sendMessage()">Send</button>
+</div>
 
-    <div id="adminPanel" class="card" style="flex:1;display:none;">
-      <h3>Admin Panel</h3>
-      <div id="users"></div>
-    </div>
+<div id="adminPanel" class="card" style="flex:1;display:none;">
+<div class="sectionTitle">Logged In</div>
+<div id="loggedInUsers"></div>
+<div class="sectionTitle">Logged Out</div>
+<div id="loggedOutUsers"></div>
+</div>
 
-  </div>
+</div>
 </div>
 
 <script type="module">
@@ -155,8 +59,7 @@ const firebaseConfig = {
   projectId: "darkchatroom-4b547",
   storageBucket: "darkchatroom-4b547.firebasestorage.app",
   messagingSenderId: "764781101022",
-  appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f",
-  measurementId: "G-31LH8LEQ89"
+  appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f"
 };
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -165,164 +68,174 @@ from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import {
   getFirestore, doc, setDoc, getDoc, updateDoc,
   collection, addDoc, query, orderBy, onSnapshot,
-  serverTimestamp, deleteDoc
+  serverTimestamp, deleteDoc, getDocs
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const db = getFirestore();
+const app=initializeApp(firebaseConfig);
+const auth=getAuth();
+const db=getFirestore();
 let currentUserData=null;
 
-// LOGIN RETENTION
-onAuthStateChanged(auth, async(user)=>{
+/* LOGIN RETENTION */
+onAuthStateChanged(auth,async(user)=>{
   if(!user){
     login.style.display="block";
     chatUI.style.display="none";
     return;
   }
 
-  localStorage.setItem("uid", user.uid);
-
   const snap=await getDoc(doc(db,"users",user.uid));
   if(!snap.exists()) return;
 
   currentUserData=snap.data();
+
+  if(currentUserData.banned){
+    alert("You are banned.");
+    signOut(auth);
+    return;
+  }
+
+  login.style.display="none";
+  chatUI.style.display="block";
   startApp(user);
 });
 
-window.createAccount = async function(){
+/* CREATE ACCOUNT */
+window.createAccount=async function(){
   const first=firstName.value.trim();
   const last=lastName.value.trim();
   if(!first) return alert("First name required");
 
+  const fullName=(first+" "+last).trim().toLowerCase();
+
+  const existing=await getDocs(collection(db,"users"));
+  let taken=false;
+  existing.forEach(docSnap=>{
+    const u=docSnap.data();
+    const name=(u.firstName+" "+(u.lastName||"")).trim().toLowerCase();
+    if(name===fullName) taken=true;
+  });
+  if(taken) return alert("Name already taken");
+
   const res=await signInAnonymously(auth);
   const uid=res.user.uid;
+  localStorage.setItem("uid",uid);
 
   await setDoc(doc(db,"users",uid),{
     uid,firstName:first,lastName:last,
-    isAdmin:false,verified:false,
-    forceLogout:false,loggedOut:false,
+    verified:false,isAdmin:false,
+    banned:false,loggedOut:false,
     createdAt:serverTimestamp()
   });
 };
 
+/* START APP */
 function startApp(user){
-  login.style.display="none";
-  chatUI.style.display="block";
+
+updateProfile();
+
+onSnapshot(doc(db,"users",user.uid),(snap)=>{
+  currentUserData=snap.data();
   updateProfile();
 
-  // Watch user document
-  onSnapshot(doc(db,"users",user.uid),(snap)=>{
-    currentUserData=snap.data();
-    updateProfile();
+  if(currentUserData.loggedOut){
+    signOut(auth);
+  }
+});
 
-    if(currentUserData.forceLogout){
-      signOut(auth);
-      updateDoc(doc(db,"users",user.uid),{
-        forceLogout:false,
-        loggedOut:true
-      });
-    }
-  });
-
-  // Messages
-  const q=query(collection(db,"messages"),orderBy("createdAt"));
-  onSnapshot(q,(snap)=>{
-    messages.innerHTML="";
-    snap.forEach(docSnap=>{
-      const d=docSnap.data();
-      const time=d.createdAt?.toDate?
-        new Date(d.createdAt.toDate()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
-        :"";
-
-      messages.innerHTML+=`
-        <div class="message">
-          <div class="meta">
-            <div>
-              <strong>${d.firstName} ${d.lastName||""}</strong>
-              <span class="${d.verified?'verified':'unverified'}">
-                ${d.verified?'✓ Verified':'Unverified'}
-              </span>
-            </div>
-            <div class="time">${time}</div>
-          </div>
-          ${d.text}
-          ${currentUserData.isAdmin?
-            `<br><button class="danger"
-              onclick="deleteMessage('${docSnap.id}')">
-              Delete
-            </button>`:""}
+/* MESSAGES */
+const q=query(collection(db,"messages"),orderBy("createdAt"));
+onSnapshot(q,(snap)=>{
+  messages.innerHTML="";
+  snap.forEach(docSnap=>{
+    const d=docSnap.data();
+    const time=d.createdAt?.toDate?
+      new Date(d.createdAt.toDate()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+      :"";
+    messages.innerHTML+=`
+    <div class="message">
+      <div class="meta">
+        <div>
+          <strong>${d.firstName}</strong>
+          ${d.verified?"✓":""}
         </div>
-      `;
-    });
-    messages.scrollTop=messages.scrollHeight;
+        <div>${time}</div>
+      </div>
+      ${d.text}
+      ${currentUserData.isAdmin?`<br>
+        <button class="danger" onclick="deleteMessage('${docSnap.id}')">Delete</button>`:""}
+    </div>`;
   });
+});
 
-  if(currentUserData.isAdmin)loadAdminPanel();
-}
+/* ADMIN PANEL */
+if(currentUserData.isAdmin){
+  adminPanel.style.display="block";
 
-function updateProfile(){
-  profile.innerHTML=`
-    <strong>${currentUserData.firstName} ${currentUserData.lastName||""}</strong><br>
-    Status: ${currentUserData.verified?'Verified':'Unverified'}
-  `;
-  adminPanel.style.display=currentUserData.isAdmin?"block":"none";
-}
-
-window.sendMessage=async function(){
-  const text=messageInput.value.trim();
-  if(!text)return;
-
-  await addDoc(collection(db,"messages"),{
-    uid:currentUserData.uid,
-    firstName:currentUserData.firstName,
-    lastName:currentUserData.lastName,
-    verified:currentUserData.verified,
-    text,
-    createdAt:serverTimestamp()
-  });
-
-  messageInput.value="";
-};
-
-window.deleteMessage=async function(id){
-  await deleteDoc(doc(db,"messages",id));
-};
-
-function loadAdminPanel(){
   onSnapshot(collection(db,"users"),(snap)=>{
-    users.innerHTML="";
+    loggedInUsers.innerHTML="";
+    loggedOutUsers.innerHTML="";
     snap.forEach(docSnap=>{
       const u=docSnap.data();
-      users.innerHTML+=`
-        <div class="userRow">
-          ${u.firstName} ${u.lastName||""}
-          ${u.loggedOut?'<div class="loggedout">(Logged Out)</div>':''}
-          <br>
-          (${u.verified?'Verified':'Unverified'})
-          <br>
-          <button class="adminBtn"
-            onclick="verifyUser('${u.uid}',${!u.verified})">
-            ${u.verified?'Unverify':'Verify'}
-          </button>
-          <button class="danger"
-            onclick="forceLogout('${u.uid}')">
-            Force Logout
-          </button>
-        </div>
-      `;
+      const html=`
+      <div style="margin-bottom:4px;font-size:12px">
+        ${u.firstName} ${u.lastName||""}
+        ${u.banned?"(Banned)":""}
+        <br>
+        <button class="adminBtn"
+        onclick="verifyUser('${u.uid}',${!u.verified})">
+        ${u.verified?"Unverify":"Verify"}
+        </button>
+        <button class="danger"
+        onclick="banUser('${u.uid}',${!u.banned})">
+        ${u.banned?"Unban":"Ban"}
+        </button>
+        <button class="danger"
+        onclick="forceLogout('${u.uid}')">
+        Force Logout
+        </button>
+      </div>`;
+
+      if(u.loggedOut)
+        loggedOutUsers.innerHTML+=
+          `<div class="loggedout">${u.firstName}</div>`;
+      else
+        loggedInUsers.innerHTML+=html;
     });
   });
 }
+}
 
-window.verifyUser=async(uid,val)=>{
-  await updateDoc(doc(db,"users",uid),{verified:val});
+/* PROFILE */
+function updateProfile(){
+profile.innerHTML=
+`<strong>${currentUserData.firstName}</strong>
+<br>Status: ${currentUserData.verified?"Verified":"Unverified"}`;
+}
+
+/* SEND MESSAGE */
+window.sendMessage=async function(){
+const text=messageInput.value.trim();
+if(!text) return;
+
+await addDoc(collection(db,"messages"),{
+  uid:currentUserData.uid,
+  firstName:currentUserData.firstName,
+  lastName:currentUserData.lastName,
+  verified:currentUserData.verified,
+  text,
+  createdAt:serverTimestamp()
+});
+messageInput.value="";
 };
 
-window.forceLogout=async(uid)=>{
-  await updateDoc(doc(db,"users",uid),{
-    forceLogout:true
-  });
+/* ADMIN ACTIONS */
+window.deleteMessage=id=>deleteDoc(doc(db,"messages",id));
+window.verifyUser=(uid,val)=>updateDoc(doc(db,"users",uid),{verified:val});
+window.forceLogout=uid=>updateDoc(doc(db,"users",uid),{loggedOut:true});
+window.banUser=async(uid,val)=>{
+  await updateDoc(doc(db,"users",uid),{banned:val});
+  if(val) await updateDoc(doc(db,"users",uid),{loggedOut:true});
 };
 
 </script>
