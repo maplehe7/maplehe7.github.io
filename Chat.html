@@ -316,8 +316,12 @@ onSnapshot(q,(snap)=>{
     <div class="message">
       <div class="meta">
         <div>
-          <strong>${d.firstName}</strong>
-          ${d.verified?"✓":""}
+          <strong>
+            ${d.firstName}
+            ${d.verified 
+              ? '<span class="verified">✓ Verified</span>' 
+              : '<span class="unverified">(Unverified)</span>'}
+          </strong>
         </div>
         <div>${time}</div>
       </div>
