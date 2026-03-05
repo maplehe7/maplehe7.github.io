@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ocean chat thingy</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ocean chat thingy</title>
 <style>
-
-:root{
+  :root{
+    --bg:transparent;
     --card:rgba(17,24,39,.72);
     --stroke:rgba(148,163,184,.18);
     --text:#e5e7eb;
@@ -16,21 +14,19 @@
     --brand:#4a86e8;
     --danger:#ff3b30;
     --ok:#34c759;
+    --warn:#ffcc00;
     --shadow:0 18px 50px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.34);
     --r:18px;
-}
+  }
 
-*{
-    box-sizing:border-box;
-}
+  *{box-sizing:border-box;}
 
-html,body{
+  html,body{
     height:100%;
     background:transparent;
-    -webkit-text-size-adjust:100%;
-}
+  }
 
-body{
+  body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     color:var(--text);
@@ -38,325 +34,1188 @@ body{
     display:flex;
     justify-content:center;
     padding:14px;
-}
+  }
 
-/* layout */
+  /* ===== LAYOUT (with centered mode) ===== */
 
-.wrap{
+  .wrap{
     width:100%;
     max-width:1100px;
-    display:grid;
+    display:flex;
     gap:12px;
-}
+    align-items:flex-start;
+  }
 
-@media(min-width:980px){
-    .wrap{
-        grid-template-columns:2fr 1fr;
-    }
-}
+  .mainCol{
+    flex:1;
+    min-width:0;
+  }
 
-/* cards */
+  .sideCol{
+    width:360px;
+    flex:0 0 360px;
+    min-width:320px;
+  }
 
-.card{
+  @media (max-width:980px){
+    .wrap{ flex-direction:column; }
+    .sideCol{ width:100%; flex:1 1 auto; min-width:0; }
+  }
+
+  /* ✅ centered when admin sidebar hidden */
+  .wrap.centered{ justify-content:center; }
+  .wrap.centered .sideCol{ display:none; }
+  .wrap.centered .mainCol{ max-width:900px; }
+
+  /* cards */
+
+  .card{
     background:var(--card);
     border:1px solid var(--stroke);
     border-radius:var(--r);
     box-shadow:var(--shadow);
     backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
     overflow:hidden;
-}
+  }
 
-/* header */
+  /* header */
 
-.hdr{
+  .hdr{
     padding:12px 14px;
     border-bottom:1px solid var(--stroke);
     display:flex;
-    justify-content:space-between;
     align-items:center;
-}
+    justify-content:space-between;
+    gap:10px;
+  }
 
-.hdr .title{
+  .hdr .title{
     font-weight:900;
-}
+    letter-spacing:.2px;
+  }
 
-.hdr .sub{
+  .hdr .sub{
     font-size:12px;
     color:var(--muted);
-}
+    margin-top:3px;
+  }
 
-/* pills */
+  .sectionTitle{
+    font-size:12px;
+    letter-spacing:.2px;
+    text-transform:uppercase;
+    color:rgba(229,231,235,.75);
+    margin-bottom:8px;
+    font-weight:900;
+  }
 
-.pill{
+  /* pills */
+
+  .pillRow{
+    display:flex;
+    gap:8px;
+    align-items:center;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+
+  .pill{
     font-size:12px;
     padding:6px 10px;
     border-radius:999px;
     border:1px solid var(--stroke);
-    background:rgba(148,163,184,.1);
-}
+    background:rgba(148,163,184,.10);
+    color:var(--muted);
+  }
 
-.pill.admin{
+  .pill.admin{
+    border-color:rgba(74,134,232,.25);
     background:rgba(74,134,232,.12);
-    color:white;
-}
+    color:#fff;
+  }
 
-/* buttons */
+  /* buttons */
 
-button,.btn{
+  .btn{
     border:none;
-    border-radius:12px;
-    padding:8px 12px;
-    font-weight:700;
+    border-radius:14px;
+    padding:10px 14px;
+    font-weight:900;
     cursor:pointer;
     background:var(--brand);
     color:white;
-    touch-action:manipulation;
-    -webkit-tap-highlight-color:transparent;
-}
+    font-size:13px;
+  }
 
-.btn.ghost{
-    background:rgba(148,163,184,.15);
-}
+  .btn.ghost{
+    background:rgba(148,163,184,.14);
+    color:var(--text);
+  }
 
-.btn.danger{background:var(--danger)}
-.btn.ok{background:var(--ok)}
+  .btn.danger{background:var(--danger);}
+  .btn.ok{background:var(--ok);}
 
-.small{
+  .small{
+    padding:8px 10px;
+    border-radius:12px;
     font-size:12px;
-    padding:6px 10px;
-}
+  }
 
-/* chat body */
+  /* chat body */
 
-.body{
+  .body{
     height:min(72vh,720px);
     display:flex;
     flex-direction:column;
-    min-height:0;
-}
+    position:relative;
+  }
 
-#messages{
+  #messages{
     flex:1;
     overflow-y:auto;
     padding:12px;
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;
-}
+    scroll-behavior:smooth;
+  }
 
-.msg{
+  /* message */
+
+  .msg{
+    padding:10px 12px;
+    border-radius:16px;
+    border:1px solid rgba(148,163,184,.16);
     background:rgba(2,6,23,.55);
-    border-radius:14px;
-    padding:10px;
-    margin:8px 0;
-}
+    margin:10px 0;
+  }
 
-.meta{
-    font-size:12px;
-    color:var(--muted);
+  .meta{
     display:flex;
     justify-content:space-between;
-    margin-bottom:4px;
-}
+    align-items:center;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
 
-/* composer */
-
-.composer{
+  .nameRow{
     display:flex;
-    gap:10px;
+    align-items:center;
+    gap:8px;
+  }
+
+  .name{
+    font-weight:900;
+  }
+
+  .tag{
+    font-size:11px;
+    font-weight:900;
+    padding:4px 8px;
+    border-radius:999px;
+    border:1px solid rgba(148,163,184,.18);
+  }
+
+  .tag.unv{
+    border-color:rgba(255,59,48,.30);
+    background:rgba(255,59,48,.10);
+  }
+
+  .tag.v{
+    border-color:rgba(52,199,89,.30);
+    background:rgba(52,199,89,.10);
+  }
+
+  .text{
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+
+  .adminMsgRow{
+    margin-top:8px;
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+  }
+
+  /* composer */
+
+  .composer{
     padding:10px;
     border-top:1px solid var(--stroke);
-}
+    display:flex;
+    gap:10px;
+  }
 
-textarea,input{
-    font-size:16px;
-}
-
-textarea{
+  textarea{
     flex:1;
-    border-radius:12px;
-    border:1px solid var(--stroke);
-    background:rgba(2,6,23,.6);
-    color:white;
-    padding:10px;
     resize:none;
-}
+    min-height:44px;
+    max-height:140px;
+    padding:10px;
+    border-radius:14px;
+    border:1px solid rgba(148,163,184,.22);
+    background:rgba(2,6,23,.55);
+    color:var(--text);
+    outline:none;
+  }
 
-/* admin panel */
+  textarea:focus{ border-color:rgba(74,134,232,.45); }
 
-#adminPanel{
+  /* modal */
+
+  .modalWrap{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+    z-index:50;
+  }
+
+  .modalWrap.show{ display:flex; }
+
+  .modal{
+    width:100%;
+    max-width:460px;
+    background:rgba(17,24,39,.88);
+    border:1px solid var(--stroke);
+    border-radius:20px;
+    padding:18px;
+    box-shadow:var(--shadow);
+  }
+
+  .modal input{
+    width:100%;
+    margin-top:10px;
+    padding:10px;
+    border-radius:12px;
+    border:1px solid rgba(148,163,184,.22);
+    background:rgba(2,6,23,.55);
+    color:var(--text);
+    outline:none;
+  }
+
+  .modal input:focus{ border-color:rgba(74,134,232,.45); }
+
+  .err{
+    display:none;
+    margin-top:10px;
+    padding:10px;
+    border-radius:12px;
+    background:rgba(255,59,48,.12);
+    border:1px solid rgba(255,59,48,.25);
+    color:#fff;
+    font-size:13px;
+  }
+
+  /* overlay */
+
+  .overlay{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(2,6,23,.6);
+    z-index:10;
+    padding:14px;
+  }
+
+  .overlay.show{ display:flex; }
+
+  .overlayCard{
+    width:100%;
+    max-width:520px;
+    background:rgba(17,24,39,.88);
+    border:1px solid var(--stroke);
+    border-radius:20px;
+    padding:18px;
+    box-shadow:var(--shadow);
+  }
+
+  .overlayCard h3{ margin:0 0 8px 0; font-size:18px; }
+  .overlayCard p{ margin:0 0 14px 0; color:rgba(229,231,235,.8); line-height:1.35; }
+
+  /* ADMIN PANEL */
+
+  #adminPanel{
     height:min(72vh,720px);
     display:flex;
     flex-direction:column;
-    min-height:0;
-}
+    position:sticky;
+    top:14px;
+  }
 
-.adminBody{
-    flex:1;
+  @media (max-width:980px){
+    #adminPanel{ position:relative; top:auto; }
+  }
+
+  #adminPanel .hdr{ flex-shrink:0; }
+
+  .adminBody{
     display:flex;
     flex-direction:column;
-    padding:12px;
-    gap:10px;
+    gap:12px;
+    padding:14px;
+    flex:1;
     overflow:hidden;
-    min-height:0;
-}
+  }
 
-.searchRow{
+  .searchRow{
     display:flex;
     gap:8px;
-}
+  }
 
-.searchRow input{
+  .searchRow input{
     flex:1;
-    border-radius:10px;
-    padding:8px;
-    border:1px solid var(--stroke);
-    background:rgba(2,6,23,.6);
-    color:white;
-}
+    padding:10px;
+    border-radius:12px;
+    border:1px solid rgba(148,163,184,.22);
+    background:rgba(2,6,23,.55);
+    color:var(--text);
+    outline:none;
+    min-width:0;
+  }
 
-/* user list */
+  .searchRow input:focus{ border-color:rgba(74,134,232,.45); }
 
-.usersContainer{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    min-height:0;
-}
-
-#usersList{
+  #usersList{
     flex:1;
     overflow-y:auto;
     display:flex;
     flex-direction:column;
-    gap:8px;
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;
-}
+    gap:10px;
+    padding-right:4px;
+    margin-top:10px;
+  }
 
-/* user card */
-
-.userCard{
+  .userCard{
     background:rgba(148,163,184,.08);
     border:1px solid var(--stroke);
-    border-radius:14px;
-    padding:10px;
+    border-radius:16px;
+    padding:12px;
     display:flex;
     justify-content:space-between;
-    gap:8px;
-}
+    gap:10px;
+  }
 
-.uMeta{
-    font-size:11px;
-    color:var(--muted);
-}
+  .userCard .uName{ font-weight:900; }
+  .userCard .uMeta{ font-size:12px; color:var(--muted); }
 
-.inlineEdit{
+  .inlineEdit{
     display:flex;
-    gap:6px;
-    margin-top:6px;
-}
+    gap:8px;
+    margin-top:10px;
+  }
 
-.inlineEdit input{
-    border-radius:10px;
-    border:1px solid var(--stroke);
-    background:rgba(2,6,23,.6);
-    color:white;
-    padding:6px;
-}
+  .inlineEdit input{
+    flex:1;
+    padding:10px;
+    border-radius:12px;
+    border:1px solid rgba(148,163,184,.22);
+    background:rgba(2,6,23,.55);
+    color:var(--text);
+    outline:none;
+    min-width:0;
+  }
 
-.uActions{
+  .inlineEdit input:focus{ border-color:rgba(74,134,232,.45); }
+
+  .uActions{
     display:flex;
     flex-wrap:wrap;
-    gap:6px;
+    gap:8px;
     justify-content:flex-end;
-}
+    align-content:flex-start;
+  }
 
-/* toast */
+  /* toast */
 
-.toast{
+  .toast{
     position:fixed;
-    bottom:14px;
     left:50%;
+    bottom:14px;
     transform:translateX(-50%);
-    background:black;
-    padding:10px 16px;
+    background:rgba(2,6,23,.82);
     border-radius:999px;
+    padding:10px 14px;
+    font-size:13px;
     display:none;
-}
+    border:1px solid rgba(148,163,184,.18);
+    z-index:60;
+  }
 
-.toast.show{
-    display:block;
-}
-
+  .toast.show{ display:block; }
 </style>
 </head>
 
-
 <body>
-
-<div class="wrap">
-
-    <!-- CHAT PANEL -->
-    <div class="card">
-
+  <div class="wrap centered">
+    <!-- CHAT -->
+    <div class="mainCol">
+      <div class="card">
         <div class="hdr">
-            <div>
-                <div class="title">Ocean chat thingy</div>
-                <div class="sub" id="status">Connecting...</div>
-            </div>
-
-            <div style="display:flex;gap:8px">
-                <div class="pill" id="mePill">Not signed in</div>
-                <div class="pill admin" id="adminPill" style="display:none">Admin</div>
-            </div>
+          <div>
+            <div class="title">Ocean chat thingy</div>
+            <div class="sub" id="status">Connecting…</div>
+          </div>
+          <div class="pillRow">
+            <div class="pill" id="mePill">Not signed in</div>
+            <div class="pill admin" id="adminPill" style="display:none;">Admin</div>
+            <button class="btn ghost" id="signOutTop" style="display:none;">Sign out</button>
+          </div>
         </div>
 
         <div class="body">
+          <div id="messages" aria-live="polite"></div>
 
-            <div id="messages"></div>
+          <div class="composer">
+            <textarea id="messageInput" placeholder="Type…" maxlength="2000"></textarea>
+            <button class="btn" id="sendBtn">Send</button>
+          </div>
 
-            <div class="composer">
-                <textarea id="messageInput"></textarea>
-                <button class="btn" id="sendBtn">Send</button>
+          <div class="overlay" id="blockedOverlay">
+            <div class="overlayCard">
+              <h3 id="blockedTitle">Blocked</h3>
+              <p id="blockedText">You cannot use the chat right now.</p>
+              <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn ghost" id="blockedSignOut">Sign out</button>
+              </div>
             </div>
-
+          </div>
         </div>
+      </div>
     </div>
 
-
     <!-- ADMIN PANEL -->
-    <div class="card" id="adminPanel" style="display:none">
-
+    <div class="sideCol">
+      <div class="card" id="adminPanel" style="display:none;">
         <div class="hdr">
-            <div>
-                <div class="title">Admin</div>
-                <div class="sub">Moderation</div>
-            </div>
-
-            <button class="btn ghost small" id="refreshAdmin">Refresh</button>
+          <div>
+            <div class="title">Admin</div>
+            <div class="sub">Verify • Ban • Logout • Rename • Delete</div>
+          </div>
+          <button class="btn ghost small" id="refreshAdmin">Refresh</button>
         </div>
 
         <div class="adminBody">
-
+          <div>
+            <div class="sectionTitle">Search</div>
             <div class="searchRow">
-                <input id="adminSearch" placeholder="Search user">
-                <button class="btn ghost small" id="clearSearch">Clear</button>
+              <input id="adminSearch" placeholder="Search name / uid…" />
+              <button class="btn ghost small" id="clearSearch">Clear</button>
             </div>
+          </div>
 
-            <div class="usersContainer">
-                <div id="usersList"></div>
-            </div>
-
+          <div style="display:flex; flex-direction:column; min-height:0; flex:1;">
+            <div class="sectionTitle">Users</div>
+            <div id="usersList"></div>
+          </div>
         </div>
-
+      </div>
     </div>
+  </div>
 
-</div>
+  <!-- Name prompt (unique names) -->
+  <div class="modalWrap" id="nameModal" aria-modal="true" role="dialog">
+    <div class="modal">
+      <h2 style="margin:0 0 6px 0;">Create account</h2>
+      <p style="margin:0; color:rgba(229,231,235,.78); line-height:1.35;">
+        Pick a <b>unique</b> name. New users start <b>Unverified</b> until an admin verifies you.
+      </p>
+      <input id="displayName" placeholder="e.g. Alex" maxlength="24" autocomplete="off" />
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button class="btn" id="saveNameBtn" style="flex:1;">Enter</button>
+        <button class="btn ghost" id="signOutBtn" type="button">Cancel</button>
+      </div>
+      <div class="err" id="nameErr"></div>
+    </div>
+  </div>
 
+  <div id="toast" class="toast"></div>
 
-<div class="toast" id="toast"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import {
+      getAuth,
+      signInAnonymously,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      getDoc,
+      updateDoc,
+      collection,
+      addDoc,
+      query,
+      orderBy,
+      onSnapshot,
+      serverTimestamp,
+      limit,
+      deleteDoc,
+      runTransaction
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-<!-- Firebase + JS remains exactly the same as previous working version -->
+    // ---- Firebase config (yours)
+    const firebaseConfig = {
+      apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
+      authDomain: "darkchatroom-4b547.firebaseapp.com",
+      projectId: "darkchatroom-4b547",
+      storageBucket: "darkchatroom-4b547.firebasestorage.app",
+      messagingSenderId: "764781101022",
+      appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f",
+      measurementId: "G-31LH8LEQ89"
+    };
 
+    initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+
+    // ---- DOM
+    const $ = (id) => document.getElementById(id);
+    const wrapEl = document.querySelector(".wrap");
+    const sideCol = document.querySelector(".sideCol");
+
+    const statusEl = $("status");
+    const mePill = $("mePill");
+    const adminPill = $("adminPill");
+    const signOutTop = $("signOutTop");
+
+    const messagesEl = $("messages");
+    const messageInput = $("messageInput");
+    const sendBtn = $("sendBtn");
+
+    const blockedOverlay = $("blockedOverlay");
+    const blockedTitle = $("blockedTitle");
+    const blockedText = $("blockedText");
+    const blockedSignOut = $("blockedSignOut");
+
+    const adminPanel = $("adminPanel");
+    const refreshAdmin = $("refreshAdmin");
+    const usersList = $("usersList");
+    const adminSearch = $("adminSearch");
+    const clearSearch = $("clearSearch");
+
+    const nameModal = $("nameModal");
+    const displayNameEl = $("displayName");
+    const saveNameBtn = $("saveNameBtn");
+    const signOutBtn = $("signOutBtn");
+    const nameErr = $("nameErr");
+
+    const toast = $("toast");
+
+    // ---- Device ID (ban persistence)
+    function getDeviceId() {
+      const k = "mgc_device_id";
+      let v = localStorage.getItem(k);
+      if (!v) {
+        v = (crypto?.randomUUID
+          ? crypto.randomUUID()
+          : ("dev_" + Math.random().toString(36).slice(2) + Date.now()));
+        localStorage.setItem(k, v);
+      }
+      return v;
+    }
+    const deviceId = getDeviceId();
+
+    // ---- State
+    let me = null;
+    let myProfile = null;
+    let unsubProfile = null;
+    let unsubMessages = null;
+    let unsubUsers = null;
+
+    const userCache = new Map();
+    let lastMessagesSnapshot = null;
+    let liveUsers = [];
+
+    // ✅ NEW: ensures we scroll to bottom on first load
+    let didInitialScroll = false;
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function setErr(text) {
+      if (!text) {
+        nameErr.style.display = "none";
+        nameErr.textContent = "";
+        return;
+      }
+      nameErr.style.display = "block";
+      nameErr.textContent = text;
+    }
+
+    function openNameModal() {
+      setErr("");
+      displayNameEl.value = "";
+      nameModal.classList.add("show");
+      setTimeout(() => displayNameEl.focus(), 30);
+    }
+
+    function closeNameModal() {
+      nameModal.classList.remove("show");
+    }
+
+    function fmtTime(ts) {
+      if (!ts?.toDate) return "";
+      return ts.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function escapeHTML(s) {
+      return String(s || "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[c]));
+    }
+
+    function normalizeName(raw) {
+      const display = String(raw || "").trim().replace(/\s+/g, " ");
+      const key = display.toLowerCase();
+      return { display, key };
+    }
+
+    // ✅ NEW: force scroll to bottom (used on initial load)
+    function scrollToBottomNow() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // existing near-bottom auto-scroll (used for live updates)
+    function autoScrollNearBottom() {
+      const nearBottom = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 140;
+      if (nearBottom) requestAnimationFrame(() => messagesEl.scrollTop = messagesEl.scrollHeight);
+    }
+
+    function cleanupSubs() {
+      if (unsubProfile) { unsubProfile(); unsubProfile = null; }
+      if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+      if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+      userCache.clear();
+      lastMessagesSnapshot = null;
+      liveUsers = [];
+      didInitialScroll = false; // ✅ reset on auth/session changes
+    }
+
+    function setBlocked(mode) {
+      if (!mode) {
+        blockedOverlay.classList.remove("show");
+        sendBtn.disabled = false;
+        messageInput.disabled = false;
+        return;
+      }
+      blockedTitle.textContent = mode.title;
+      blockedText.textContent = mode.text;
+      blockedOverlay.classList.add("show");
+      sendBtn.disabled = true;
+      messageInput.disabled = true;
+    }
+
+    function renderMessagesFromSnapshot(qs, { forceBottom = false } = {}) {
+      messagesEl.innerHTML = "";
+      let count = 0;
+
+      qs.forEach((d) => {
+        const m = d.data();
+        count++;
+
+        const time = fmtTime(m.createdAt);
+        const u = userCache.get(m.uid) || {};
+        const name = escapeHTML(u.displayName || "?");
+        const verified = u.verified === true;
+
+        const div = document.createElement("div");
+        div.className = "msg";
+
+        const vTag = verified
+          ? `<span class="tag v">Verified</span>`
+          : `<span class="tag unv">Unverified</span>`;
+
+        const adminTools = (myProfile?.isAdmin === true)
+          ? `<div class="adminMsgRow"><button class="btn danger small" data-delmsg="${d.id}">Delete</button></div>`
+          : "";
+
+        div.innerHTML = `
+          <div class="meta">
+            <div class="nameRow"><span class="name">${name}</span>${vTag}</div>
+            <div>${time}</div>
+          </div>
+          <div class="text">${escapeHTML(m.text || "")}</div>
+          ${adminTools}
+        `;
+
+        messagesEl.appendChild(div);
+      });
+
+      statusEl.textContent = `Live • ${count} loaded`;
+
+      // ✅ NEW behavior:
+      // - on first load (forceBottom) scroll all the way down
+      // - after that, only auto-scroll if user is near the bottom
+      if (forceBottom) {
+        requestAnimationFrame(() => {
+          scrollToBottomNow();
+          // second frame helps after fonts/layout settle
+          requestAnimationFrame(scrollToBottomNow);
+        });
+      } else {
+        autoScrollNearBottom();
+      }
+    }
+
+    function renderAdminUsers() {
+      if (!myProfile?.isAdmin) return;
+
+      const users = Array.isArray(liveUsers) ? [...liveUsers] : [];
+      const q = (adminSearch.value || "").trim().toLowerCase();
+
+      const filtered = q
+        ? users.filter(u =>
+            String(u.displayName || "").toLowerCase().includes(q) ||
+            String(u.uid || u.id || "").toLowerCase().includes(q)
+          )
+        : users;
+
+      filtered.sort((a, b) => {
+        const av = a.verified ? 1 : 0;
+        const bv = b.verified ? 1 : 0;
+        if (av !== bv) return av - bv;
+        return String(a.displayName || "").localeCompare(String(b.displayName || ""));
+      });
+
+      usersList.innerHTML = "";
+
+      for (const u of filtered) {
+        const uid = u.uid || u.id;
+        const isMe = (uid === me.uid);
+
+        const flags = [
+          u.isAdmin ? "Admin" : null,
+          u.verified ? "Verified" : "Unverified",
+          u.banned ? "Banned" : null,
+          u.loggedOut ? "LoggedOut" : null
+        ].filter(Boolean).join(" • ");
+
+        const card = document.createElement("div");
+        card.className = "userCard";
+
+        card.innerHTML = `
+          <div style="min-width:0; flex:1;">
+            <div class="uName">${escapeHTML(u.displayName || "(no name)")}</div>
+            <div class="uMeta">${escapeHTML(String(uid).slice(0, 10))} • ${escapeHTML(flags)}</div>
+            <div class="inlineEdit">
+              <input data-rename="${uid}" placeholder="New name" maxlength="24" />
+              <button class="btn ok small" data-renbtn="${uid}">Rename</button>
+            </div>
+          </div>
+
+          <div class="uActions">
+            <button class="btn ghost small" data-verify="${uid}" data-verifyval="${u.verified ? "0" : "1"}">
+              ${u.verified ? "Unverify" : "Verify"}
+            </button>
+
+            <button class="btn ghost small" data-clearlogout="${uid}" ${u.loggedOut ? "" : "disabled"}>
+              Clear logout
+            </button>
+
+            <button class="btn ghost small" data-logout="${uid}" ${isMe ? "disabled" : ""}>
+              Force logout
+            </button>
+
+            <button class="btn ghost small"
+              data-setadmin="${uid}"
+              data-setadminval="${u.isAdmin ? "0" : "1"}"
+              ${isMe ? "disabled" : ""}>
+              ${u.isAdmin ? "Remove admin" : "Make admin"}
+            </button>
+
+            <button class="btn danger small" data-ban="${uid}" data-banval="${u.banned ? "0" : "1"}">
+              ${u.banned ? "Unban" : "Ban"}
+            </button>
+          </div>
+        `;
+
+        usersList.appendChild(card);
+      }
+    }
+
+    refreshAdmin.addEventListener("click", renderAdminUsers);
+    adminSearch.addEventListener("input", renderAdminUsers);
+    clearSearch.addEventListener("click", () => { adminSearch.value = ""; renderAdminUsers(); });
+
+    onAuthStateChanged(auth, async (user) => {
+      cleanupSubs();
+      me = user || null;
+      myProfile = null;
+
+      // Default: hide sidebar + center until proven admin
+      sideCol.style.display = "none";
+      wrapEl.classList.add("centered");
+
+      if (!user) {
+        statusEl.textContent = "Signing in…";
+        mePill.textContent = "Not signed in";
+        adminPill.style.display = "none";
+        adminPanel.style.display = "none";
+        signOutTop.style.display = "none";
+        setBlocked(null);
+        await signInAnonymously(auth);
+        return;
+      }
+
+      // device ban check
+      try {
+        const banSnap = await getDoc(doc(db, "bannedDevices", deviceId));
+        if (banSnap.exists() && banSnap.data()?.banned === true) {
+          statusEl.textContent = "Blocked";
+          mePill.textContent = "Banned device";
+          adminPill.style.display = "none";
+          adminPanel.style.display = "none";
+          signOutTop.style.display = "none";
+          setBlocked({ title: "Banned", text: "This device is banned. You cannot rejoin." });
+          return;
+        }
+      } catch (e) { console.error(e); }
+
+      const uref = doc(db, "users", user.uid);
+      const snap = await getDoc(uref);
+
+      if (!snap.exists()) {
+        mePill.textContent = "Choose a name";
+        openNameModal();
+      } else {
+        myProfile = snap.data();
+        mePill.textContent = "You: " + (myProfile.displayName || "?");
+        closeNameModal();
+      }
+
+      unsubProfile = onSnapshot(uref, (s) => {
+        if (!s.exists()) return;
+        myProfile = s.data();
+
+        mePill.textContent = "You: " + (myProfile.displayName || "?");
+
+        if (myProfile.isAdmin) {
+          adminPill.style.display = "inline-block";
+          adminPanel.style.display = "flex";
+          signOutTop.style.display = "inline-block";
+          sideCol.style.display = "block";
+          wrapEl.classList.remove("centered");
+        } else {
+          adminPill.style.display = "none";
+          adminPanel.style.display = "none";
+          signOutTop.style.display = "none";
+          sideCol.style.display = "none";
+          wrapEl.classList.add("centered");
+        }
+
+        if (myProfile.banned) {
+          setBlocked({ title: "Banned", text: "An admin has banned this account/device." });
+          return;
+        }
+
+        if (myProfile.loggedOut) {
+          setBlocked({ title: "Logged out", text: "An admin logged you out. Ask an admin to clear it." });
+          return;
+        }
+
+        setBlocked(null);
+      });
+
+      unsubUsers = onSnapshot(collection(db, "users"), (qs) => {
+        userCache.clear();
+        liveUsers = [];
+
+        qs.forEach((d) => {
+          const u = d.data();
+          const uid = d.id;
+
+          const row = {
+            id: uid,
+            uid: uid,
+            displayName: u.displayName || "",
+            verified: u.verified === true,
+            banned: u.banned === true,
+            loggedOut: u.loggedOut === true,
+            isAdmin: u.isAdmin === true,
+            deviceId: u.deviceId || null,
+            nameKey: u.nameKey || ""
+          };
+
+          liveUsers.push(row);
+
+          userCache.set(uid, {
+            displayName: row.displayName,
+            verified: row.verified,
+            banned: row.banned,
+            loggedOut: row.loggedOut,
+            isAdmin: row.isAdmin,
+            deviceId: row.deviceId
+          });
+        });
+
+        if (lastMessagesSnapshot) {
+          renderMessagesFromSnapshot(lastMessagesSnapshot, { forceBottom: !didInitialScroll });
+          didInitialScroll = true;
+        }
+
+        if (myProfile?.isAdmin && adminPanel.style.display !== "none") {
+          renderAdminUsers();
+        }
+      });
+
+      const mq = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
+      unsubMessages = onSnapshot(mq, (qs) => {
+        lastMessagesSnapshot = qs;
+
+        // ✅ forceBottom ONLY for very first message load
+        renderMessagesFromSnapshot(qs, { forceBottom: !didInitialScroll });
+        didInitialScroll = true;
+      });
+
+      statusEl.textContent = "Live";
+    });
+
+    async function saveName() {
+      if (!me) return;
+
+      const { display, key } = normalizeName(displayNameEl.value);
+
+      setErr("");
+      if (!display) return setErr("Name required.");
+      if (display.length < 2) return setErr("Name too short.");
+      if (display.length > 24) return setErr("Name too long.");
+
+      saveNameBtn.disabled = true;
+
+      try {
+        const uref = doc(db, "users", me.uid);
+        const nref = doc(db, "usernames", key);
+
+        await runTransaction(db, async (tx) => {
+          const nSnap = await tx.get(nref);
+          if (nSnap.exists()) throw new Error("NAME_TAKEN");
+
+          const uSnap = await tx.get(uref);
+          const existing = uSnap.exists() ? uSnap.data() : null;
+
+          tx.set(nref, { uid: me.uid, displayName: display, createdAt: serverTimestamp() });
+
+          tx.set(uref, {
+            uid: me.uid,
+            displayName: display,
+            nameKey: key,
+            deviceId: deviceId,
+            verified: false,
+            banned: false,
+            loggedOut: false,
+            isAdmin: false,
+            createdAt: existing?.createdAt || serverTimestamp()
+          }, { merge: true });
+        });
+
+        closeNameModal();
+        showToast("Created. Waiting for verify.");
+      } catch (e) {
+        console.error(e);
+        if (String(e?.message || "").includes("NAME_TAKEN")) setErr("That name is already taken.");
+        else setErr("Couldn’t create account. Check console.");
+      } finally {
+        saveNameBtn.disabled = false;
+      }
+    }
+
+    saveNameBtn.addEventListener("click", saveName);
+    displayNameEl.addEventListener("keydown", (e) => { if (e.key === "Enter") saveName(); });
+
+    signOutBtn.addEventListener("click", () => closeNameModal());
+
+    blockedSignOut.addEventListener("click", async () => {
+      try { await signOut(auth); } catch (e) { console.error(e); }
+    });
+
+    signOutTop.addEventListener("click", async () => {
+      if (myProfile?.isAdmin) await signOut(auth);
+    });
+
+    async function send() {
+      if (!me) return;
+      if (!myProfile?.displayName) return openNameModal();
+      if (myProfile.banned || myProfile.loggedOut) return;
+
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      sendBtn.disabled = true;
+      try {
+        await addDoc(collection(db, "messages"), {
+          uid: me.uid,
+          text,
+          createdAt: serverTimestamp()
+        });
+        messageInput.value = "";
+      } catch (e) {
+        console.error(e);
+        showToast("Send failed (rules?)");
+      } finally {
+        sendBtn.disabled = false;
+        messageInput.focus();
+      }
+    }
+
+    sendBtn.addEventListener("click", send);
+    messageInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+
+    document.addEventListener("click", async (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+
+      const delId = t.getAttribute("data-delmsg");
+      if (delId && myProfile?.isAdmin) {
+        try {
+          await deleteDoc(doc(db, "messages", delId));
+          showToast("Message deleted");
+        } catch (err) {
+          console.error(err);
+          showToast("Delete failed");
+        }
+        return;
+      }
+
+      if (!myProfile?.isAdmin) return;
+
+      const vUid = t.getAttribute("data-verify");
+      if (vUid) {
+        const val = t.getAttribute("data-verifyval") === "1";
+        try {
+          await updateDoc(doc(db, "users", vUid), { verified: val });
+          showToast(val ? "Verified" : "Unverified");
+        } catch (err) {
+          console.error(err);
+          showToast("Verify failed");
+        }
+        return;
+      }
+
+      const clrUid = t.getAttribute("data-clearlogout");
+      if (clrUid) {
+        try {
+          await updateDoc(doc(db, "users", clrUid), { loggedOut: false });
+          showToast("Logout cleared");
+        } catch (err) {
+          console.error(err);
+          showToast("Clear logout failed");
+        }
+        return;
+      }
+
+      const logoutUid = t.getAttribute("data-logout");
+      if (logoutUid) {
+        try {
+          await updateDoc(doc(db, "users", logoutUid), { loggedOut: true });
+          showToast("Forced logout");
+        } catch (err) {
+          console.error(err);
+          showToast("Force logout failed");
+        }
+        return;
+      }
+
+      const adminUid = t.getAttribute("data-setadmin");
+      if (adminUid) {
+        const makeAdmin = t.getAttribute("data-setadminval") === "1";
+        try {
+          await updateDoc(doc(db, "users", adminUid), { isAdmin: makeAdmin });
+          showToast(makeAdmin ? "Admin granted" : "Admin removed");
+        } catch (err) {
+          console.error(err);
+          showToast("Admin change failed");
+        }
+        return;
+      }
+
+      const banUid = t.getAttribute("data-ban");
+      if (banUid) {
+        const willBan = t.getAttribute("data-banval") === "1";
+        try {
+          const targetSnap = await getDoc(doc(db, "users", banUid));
+          const target = targetSnap.exists() ? targetSnap.data() : null;
+          const tDevice = target?.deviceId;
+
+          await updateDoc(doc(db, "users", banUid), {
+            banned: willBan,
+            loggedOut: willBan ? true : false
+          });
+
+          if (tDevice) {
+            const dref = doc(db, "bannedDevices", tDevice);
+            if (willBan) {
+              await setDoc(dref, { banned: true, uid: banUid, bannedAt: serverTimestamp() }, { merge: true });
+            } else {
+              await deleteDoc(dref);
+            }
+          }
+
+          showToast(willBan ? "User banned" : "User unbanned");
+        } catch (err) {
+          console.error(err);
+          showToast("Ban/unban failed");
+        }
+        return;
+      }
+
+      const renUid = t.getAttribute("data-renbtn");
+      if (renUid) {
+        const input = document.querySelector(`input[data-rename="${CSS.escape(renUid)}"]`);
+        const { display, key } = normalizeName(input?.value || "");
+        if (!display) { showToast("Enter a name"); return; }
+        if (display.length < 2 || display.length > 24) { showToast("Name must be 2–24"); return; }
+
+        const uref = doc(db, "users", renUid);
+        const newNameRef = doc(db, "usernames", key);
+
+        try {
+          await runTransaction(db, async (tx) => {
+            const uSnap = await tx.get(uref);
+            if (!uSnap.exists()) throw new Error("NO_USER");
+            const u = uSnap.data();
+            const oldKey = u.nameKey;
+
+            if (oldKey !== key) {
+              const taken = await tx.get(newNameRef);
+              if (taken.exists()) throw new Error("NAME_TAKEN");
+
+              tx.set(newNameRef, { uid: renUid, displayName: display, createdAt: serverTimestamp() });
+              if (oldKey) tx.delete(doc(db, "usernames", oldKey));
+            }
+
+            tx.set(uref, { displayName: display, nameKey: key }, { merge: true });
+          });
+
+          showToast("Username changed");
+        } catch (err) {
+          console.error(err);
+          if (String(err?.message || "").includes("NAME_TAKEN")) showToast("Name taken");
+          else showToast("Rename failed");
+        }
+        return;
+      }
+    });
+
+    const adminObserver = new MutationObserver(() => {
+      if (adminPanel.style.display !== "none" && myProfile?.isAdmin) renderAdminUsers();
+    });
+    adminObserver.observe(adminPanel, { attributes: true, attributeFilter: ["style"] });
+  </script>
 </body>
 </html>
