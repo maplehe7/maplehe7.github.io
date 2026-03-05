@@ -117,10 +117,10 @@ button{
 
 </div>
 </div>
-<script>import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, signInAnonymously } 
-from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
+<script type="module">
+
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
   authDomain: "darkchatroom-4b547.firebaseapp.com",
@@ -130,18 +130,180 @@ const firebaseConfig = {
   appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f",
   measurementId: "G-31LH8LEQ89"
 };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut }
+from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc, updateDoc,
+  collection, addDoc, query, orderBy, onSnapshot,
+  serverTimestamp, deleteDoc, getDocs
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const app=initializeApp(firebaseConfig);
+const auth=getAuth();
+const db=getFirestore();
+let currentUserData=null;
 
-window.createAccount = async function(){
-  try {
-    const res = await signInAnonymously(auth);
-    alert("SUCCESS UID: " + res.user.uid);
-  } catch (e) {
-    console.error(e);
-    alert("ERROR: " + e.message);
+/* LOGIN RETENTION */
+onAuthStateChanged(auth,async(user)=>{
+  if(!user){
+    login.style.display="block";
+    chatUI.style.display="none";
+    return;
   }
-};</script>
+
+  localStorage.setItem("uid",user.uid);
+
+  const snap=await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists()) return;
+
+  currentUserData=snap.data();
+
+  if(currentUserData.banned){
+    alert("You are banned.");
+    signOut(auth);
+    return;
+  }
+
+  login.style.display="none";
+  chatUI.style.display="block";
+  startApp(user);
+});
+
+/* CREATE ACCOUNT */
+window.createAccount=async function(){
+  const first=firstName.value.trim();
+  const last=lastName.value.trim();
+  if(!first) return alert("First name required");
+
+  const fullName=(first+" "+last).trim().toLowerCase();
+
+  const usersSnap=await getDocs(collection(db,"users"));
+  let taken=false;
+  usersSnap.forEach(d=>{
+    const u=d.data();
+    const name=(u.firstName+" "+(u.lastName||"")).trim().toLowerCase();
+    if(name===fullName) taken=true;
+  });
+
+  if(taken) return alert("Name already taken");
+
+  const res=await signInAnonymously(auth);
+  const uid=res.user.uid;
+
+  await setDoc(doc(db,"users",uid),{
+    uid,firstName:first,lastName:last,
+    verified:false,isAdmin:false,
+    banned:false,loggedOut:false,
+    createdAt:serverTimestamp()
+  });
+};
+
+/* START */
+function startApp(user){
+
+updateProfile();
+
+onSnapshot(doc(db,"users",user.uid),(snap)=>{
+  currentUserData=snap.data();
+  updateProfile();
+
+  if(currentUserData.loggedOut){
+    signOut(auth);
+  }
+});
+
+/* MESSAGES */
+const q=query(collection(db,"messages"),orderBy("createdAt"));
+onSnapshot(q,(snap)=>{
+  messages.innerHTML="";
+  snap.forEach(docSnap=>{
+    const d=docSnap.data();
+    const time=d.createdAt?.toDate?
+      new Date(d.createdAt.toDate()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
+      :"";
+
+    messages.innerHTML+=`
+    <div class="message">
+      <div class="meta">
+        <div>
+          <strong>${d.firstName}</strong>
+          ${d.verified
+            ?'<span class="verified">✓</span>'
+            :'<span class="unverified">(Unverified)</span>'}
+        </div>
+        <div>${time}</div>
+      </div>
+      ${d.text}
+      ${currentUserData.isAdmin?
+      `<br><button class="danger" onclick="deleteMessage('${docSnap.id}')">Delete</button>`:""}
+    </div>`;
+  });
+});
+
+/* ADMIN PANEL */
+if(currentUserData.isAdmin){
+adminPanel.style.display="block";
+
+onSnapshot(collection(db,"users"),(snap)=>{
+loggedInUsers.innerHTML="";
+loggedOutUsers.innerHTML="";
+snap.forEach(d=>{
+const u=d.data();
+
+if(u.loggedOut){
+loggedOutUsers.innerHTML+=`<div class="loggedout">${u.firstName}</div>`;
+}else{
+loggedInUsers.innerHTML+=`
+<div style="margin-bottom:6px;font-size:12px">
+${u.firstName} ${u.lastName||""}
+<br>
+<button class="adminBtn" onclick="verifyUser('${u.uid}',${!u.verified})">
+${u.verified?"Unverify":"Verify"}
+</button>
+<button class="danger" onclick="banUser('${u.uid}',${!u.banned})">
+${u.banned?"Unban":"Ban"}
+</button>
+<button class="danger" onclick="forceLogout('${u.uid}')">
+Force Logout
+</button>
+</div>`;
+}
+});
+});
+}
+
+}
+
+function updateProfile(){
+profile.innerHTML=
+`<strong>${currentUserData.firstName}</strong>
+<br>Status: ${currentUserData.verified?"Verified":"Unverified"}`;
+}
+
+window.sendMessage=async function(){
+const text=messageInput.value.trim();
+if(!text) return;
+
+await addDoc(collection(db,"messages"),{
+uid:currentUserData.uid,
+firstName:currentUserData.firstName,
+lastName:currentUserData.lastName,
+verified:currentUserData.verified,
+text,
+createdAt:serverTimestamp()
+});
+messageInput.value="";
+};
+
+window.deleteMessage=id=>deleteDoc(doc(db,"messages",id));
+window.verifyUser=(uid,val)=>updateDoc(doc(db,"users",uid),{verified:val});
+window.forceLogout=uid=>updateDoc(doc(db,"users",uid),{loggedOut:true});
+window.banUser=async(uid,val)=>{
+await updateDoc(doc(db,"users",uid),{banned:val});
+if(val) await updateDoc(doc(db,"users",uid),{loggedOut:true});
+};
+
+</script>
 </body>
 </html>
