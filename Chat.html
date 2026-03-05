@@ -322,6 +322,79 @@
       overflow:hidden;
     }
     .toast.show{ display:block; }
+    /* --- ADMIN SCROLL: make only the list scroll (works in iframes/iOS) --- */
+    #adminPanel{
+      height:min(72vh, 720px);
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    
+    #adminPanel .adminBody{
+      flex:1 1 auto;
+      min-height:0;
+      overflow:hidden; /* contain scroll inside #usersList */
+    }
+    
+    #adminPanel .usersSection{
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+    
+    #usersList{
+      flex:1 1 auto;
+      min-height:0;
+      overflow-y:auto;
+      overflow-x:hidden;
+      -webkit-overflow-scrolling: touch; /* ✅ iOS */
+      padding-right:6px;
+    }
+    
+    /* --- FIX USER CARD OVERFLOW: responsive card layout --- */
+    .userCard{
+      display:flex;
+      flex-direction:column;   /* ✅ stack content */
+      gap:10px;
+      overflow:hidden;         /* ✅ nothing can bleed outside */
+    }
+    
+    /* left side can shrink properly */
+    .userCard > div:first-child{
+      min-width:0;
+    }
+    
+    /* rename row wraps instead of pushing out */
+    .inlineEdit{
+      display:flex;
+      flex-wrap:wrap;          /* ✅ allow wrap */
+      gap:8px;
+    }
+    
+    .inlineEdit input{
+      flex:1 1 180px;          /* ✅ input shrinks */
+      min-width:140px;
+    }
+    
+    .inlineEdit .btn{
+      flex:0 0 auto;
+    }
+    
+    /* actions row wraps INSIDE the card */
+    .uActions{
+      display:flex;
+      flex-wrap:wrap;          /* ✅ wrap buttons */
+      gap:8px;
+      justify-content:flex-start;
+      width:100%;
+    }
+    
+    .uActions .btn{
+      flex:1 1 120px;          /* ✅ buttons become grid-ish */
+      min-width:120px;
+      max-width:100%;
+    }
   </style>
 </head>
 
