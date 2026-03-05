@@ -1,379 +1,781 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chat</title>
-
-<style>
-body{
-  margin:0;
-  background:transparent;
-  font-family:-apple-system,BlinkMacSystemFont,"San Francisco",
-              "Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  display:flex;
-  justify-content:center;
-  color:#111;
-}
-
-.container{
-  width:100%;
-  max-width:1100px;
-  margin:40px 20px;
-  display:flex;
-  gap:28px;
-}
-
-.card{
-  background:rgba(255,255,255,0.85);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  border-radius:20px;
-  padding:22px;
-  box-shadow:
-    0 8px 30px rgba(0,0,0,0.08),
-    0 2px 6px rgba(0,0,0,0.05);
-}
-
-/* Login */
-#login{
-  width:280px;
-  margin:auto;
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  text-align:center;
-}
-
-#login h3{
-  font-weight:600;
-  font-size:18px;
-  margin-bottom:14px;
-}
-
-input,textarea{
-  width:100%;
-  padding:8px 10px;
-  margin:6px 0;
-  border-radius:10px;
-  border:1px solid rgba(0,0,0,0.08);
-  background:white;
-  font-size:14px;
-  outline:none;
-  transition:.2s ease;
-}
-
-input:focus,textarea:focus{
-  border:1px solid #4a86e8;
-  box-shadow:0 0 0 3px rgba(74,134,232,0.15);
-}
-
-textarea{
-  height:60px;
-  resize:none;
-}
-
-button{
-  border:none;
-  border-radius:10px;
-  padding:6px 12px;
-  font-size:12px;
-  cursor:pointer;
-  font-weight:500;
-  transition:.2s ease;
-}
-
-.primary{background:#4a86e8;color:white;}
-.primary:hover{background:#3d73c9;}
-.danger{background:#ff3b30;color:white;}
-.adminBtn{background:#34c759;color:white;}
-
-#messages{
-  height:460px;
-  overflow-y:auto;
-  margin:16px 0;
-}
-
-.message{
-  background:white;
-  padding:10px 14px;
-  border-radius:14px;
-  margin-bottom:8px;
-  box-shadow:0 2px 8px rgba(0,0,0,0.05);
-  font-size:14px;
-}
-
-.meta{
-  display:flex;
-  justify-content:space-between;
-  font-size:12px;
-  color:#555;
-  margin-bottom:4px;
-}
-
-.verified{color:#34c759;margin-left:4px;}
-.unverified{color:#999;margin-left:4px;}
-
-.sectionTitle{
-  font-size:13px;
-  font-weight:600;
-  margin:16px 0 8px;
-  color:#555;
-}
-
-.userCard{
-  background:white;
-  padding:10px;
-  border-radius:12px;
-  margin-bottom:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.05);
-  font-size:13px;
-}
-
-.loggedout{
-  font-size:12px;
-  color:#888;
-  padding:6px 0;
-}
-</style>
-</head>
-<body>
-
-<div id="login" class="card">
-<h3>Create Account</h3>
-<input id="firstName" placeholder="First name">
-<input id="lastName" placeholder="Last name (optional)">
-<button class="primary" onclick="createAccount()">Enter Chat</button>
-</div>
-
-<div id="chatUI" style="display:none;width:100%;">
-<div class="container">
-
-<div class="card" style="flex:2;">
-<div id="profile"></div>
-<div id="messages"></div>
-<textarea id="messageInput" placeholder="Type message..."></textarea>
-<button class="primary" onclick="sendMessage()">Send</button>
-</div>
-
-<div id="adminPanel" class="card" style="flex:1;display:none;">
-<div class="sectionTitle">Logged In</div>
-<div id="loggedInUsers"></div>
-<div class="sectionTitle">Logged Out</div>
-<div id="loggedOutUsers"></div>
-</div>
-
-</div>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged, signOut }
-from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-import {
-  getFirestore, doc, setDoc, getDoc, updateDoc,
-  collection, addDoc, query, orderBy, onSnapshot,
-  serverTimestamp, deleteDoc, getDocs
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
-  authDomain: "darkchatroom-4b547.firebaseapp.com",
-  projectId: "darkchatroom-4b547",
-  storageBucket: "darkchatroom-4b547.firebasestorage.app",
-  messagingSenderId: "764781101022",
-  appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f",
-  measurementId: "G-31LH8LEQ89"
-};
-
-const app=initializeApp(firebaseConfig);
-const auth=getAuth();
-const db=getFirestore();
-let currentUserData=null;
-
-/* AUTH STATE */
-onAuthStateChanged(auth,async(user)=>{
-  if(!user){
-    login.style.display="block";
-    chatUI.style.display="none";
-    return;
-  }
-
-  localStorage.setItem("uid",user.uid);
-
-  const snap=await getDoc(doc(db,"users",user.uid));
-  if(!snap.exists()) return;
-
-  currentUserData=snap.data();
-
-  if(currentUserData.banned){
-    alert("You are banned.");
-    signOut(auth);
-    return;
-  }
-
-  login.style.display="none";
-  chatUI.style.display="block";
-  startApp(user);
-});
-
-/* CREATE ACCOUNT */
-window.createAccount = async function(){
-
-  const first = firstName.value.trim();
-  const last = lastName.value.trim();
-
-  if(!first){
-    alert("First name required");
-    return;
-  }
-
-  try{
-
-    // 1️⃣ Sign in anonymously FIRST
-    const res = await signInAnonymously(auth);
-    const uid = res.user.uid;
-
-    localStorage.setItem("uid", uid);
-
-    // 2️⃣ Check duplicate name AFTER auth
-    const fullName = (first + " " + last).trim().toLowerCase();
-    const usersSnap = await getDocs(collection(db,"users"));
-
-    let taken = false;
-    usersSnap.forEach(docSnap=>{
-      const u = docSnap.data();
-      const existing = (u.firstName + " " + (u.lastName||""))
-                        .trim().toLowerCase();
-      if(existing === fullName) taken = true;
-    });
-
-    if(taken){
-      alert("Name already taken");
-      await res.user.delete();   // delete temp auth user
-      return;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mid Global Chat</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:rgba(17,24,39,.72);
+      --stroke:rgba(148,163,184,.18);
+      --text:#e5e7eb;
+      --muted:rgba(229,231,235,.65);
+      --brand:#4a86e8;
+      --danger:#ff3b30;
+      --ok:#34c759;
+      --shadow:0 18px 50px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.34);
+      --r:18px;
     }
 
-    // 3️⃣ Create user doc
-    await setDoc(doc(db,"users",uid),{
-      uid: uid,
-      firstName: first,
-      lastName: last,
-      verified: false,
-      isAdmin: false,
-      banned: false,
-      loggedOut: false,
-      createdAt: serverTimestamp()
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 520px at 18% 12%, rgba(74,134,232,.18), transparent 65%),
+        radial-gradient(860px 520px at 86% 18%, rgba(52,199,89,.12), transparent 60%),
+        linear-gradient(180deg, #060813, var(--bg));
+      display:flex;
+      justify-content:center;
+      padding:18px;
+    }
+
+    .wrap{width:100%; max-width:1100px; display:grid; gap:14px;}
+    @media (min-width: 980px){
+      .wrap{grid-template-columns: 2fr 1fr; align-items:start;}
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--stroke);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow:hidden;
+    }
+
+    .hdr{
+      padding:14px 16px;
+      border-bottom:1px solid var(--stroke);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .hdr .title{font-weight:800; letter-spacing:.2px;}
+    .hdr .sub{font-size:12px; color:var(--muted); margin-top:3px;}
+
+    .pillRow{display:flex; gap:10px; align-items:center;}
+
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--stroke);
+      background:rgba(148,163,184,.10);
+      color:var(--muted);
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .pill.admin{border-color: rgba(74,134,232,.25); background:rgba(74,134,232,.12); color:rgba(229,231,235,.90)}
+
+    .btn{
+      border:none;
+      border-radius:14px;
+      padding:10px 14px;
+      font-weight:800;
+      cursor:pointer;
+      background:var(--brand);
+      color:white;
+      transition:opacity .2s ease, transform .08s ease;
+      user-select:none;
+      font-size:13px;
+    }
+    .btn:active{transform:translateY(1px);}
+    .btn[disabled]{opacity:.55; cursor:not-allowed;}
+
+    .btn.ghost{background:rgba(148,163,184,.14); color:var(--text);}
+    .btn.danger{background:var(--danger);}
+    .btn.ok{background:var(--ok);}
+
+    .body{
+      height:min(72vh, 720px);
+      display:flex;
+      flex-direction:column;
+    }
+
+    #messages{
+      flex:1;
+      overflow:auto;
+      padding:12px;
+      scroll-behavior:smooth;
+    }
+
+    .msg{
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid rgba(148,163,184,.16);
+      background:rgba(2,6,23,.55);
+      margin:10px 0;
+    }
+
+    .meta{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+
+    .name{color:var(--text); font-weight:800;}
+    .text{white-space:pre-wrap; word-break:break-word; line-height:1.35;}
+
+    .adminMsgRow{
+      margin-top:8px;
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+    }
+
+    .composer{
+      padding:10px;
+      border-top:1px solid var(--stroke);
+      background:rgba(148,163,184,.06);
+      display:flex;
+      gap:10px;
+      align-items:flex-end;
+    }
+
+    textarea{
+      flex:1;
+      resize:none;
+      min-height:44px;
+      max-height:140px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,.22);
+      background:rgba(2,6,23,.55);
+      color:var(--text);
+      outline:none;
+      font-size:14px;
+    }
+
+    textarea:focus{
+      border-color: rgba(74,134,232,.75);
+      box-shadow: 0 0 0 4px rgba(74,134,232,.18);
+    }
+
+    /* Name prompt */
+    .modalWrap{position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:18px;}
+    .modalWrap.show{display:flex;}
+
+    .modal{
+      width:100%; max-width:440px;
+      background:rgba(17,24,39,.86);
+      border:1px solid var(--stroke);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      padding:18px;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .modal h2{margin:0 0 8px; font-size:18px;}
+    .modal p{margin:0 0 12px; color:var(--muted); font-size:13px; line-height:1.45;}
+
+    input{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,.22);
+      background:rgba(2,6,23,.55);
+      color:var(--text);
+      outline:none;
+      font-size:14px;
+    }
+    input:focus{
+      border-color: rgba(74,134,232,.75);
+      box-shadow: 0 0 0 4px rgba(74,134,232,.18);
+    }
+
+    .err{display:none; margin-top:10px; font-size:12px; color:#ffb4ae;}
+
+    /* Admin Panel */
+    .adminBody{padding:14px; display:flex; flex-direction:column; gap:12px;}
+    .sectionTitle{font-size:12px; color:var(--muted); font-weight:900; text-transform:uppercase; letter-spacing:.08em;}
+
+    .userCard{
+      background:rgba(148,163,184,.08);
+      border:1px solid var(--stroke);
+      border-radius:16px;
+      padding:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+    }
+
+    .userCard .uName{font-weight:900;}
+    .userCard .uMeta{font-size:12px; color:var(--muted); margin-top:4px;}
+    .uActions{display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;}
+
+    .small{padding:8px 10px; border-radius:12px; font-size:12px;}
+
+    .inlineEdit{display:flex; gap:8px; align-items:center; margin-top:10px;}
+    .inlineEdit input{padding:10px 10px; border-radius:12px;}
+
+    .toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background:rgba(2,6,23,.80); color:#fff;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:999px; padding:10px 14px; font-size:13px;
+      box-shadow:var(--shadow);
+      display:none; max-width:min(560px, calc(100% - 28px)); text-align:center;
+    }
+    .toast.show{display:block;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- CHAT -->
+    <div class="card">
+      <div class="hdr">
+        <div>
+          <div class="title">Mid Global Chat</div>
+          <div class="sub" id="status">Connecting…</div>
+        </div>
+        <div class="pillRow">
+          <div class="pill" id="mePill">Not signed in</div>
+          <div class="pill admin" id="adminPill" style="display:none;">Admin</div>
+          <button class="btn ghost" id="signOutTop">Sign out</button>
+        </div>
+      </div>
+
+      <div class="body">
+        <div id="messages" aria-live="polite"></div>
+        <div class="composer">
+          <textarea id="messageInput" placeholder="Type…" maxlength="2000"></textarea>
+          <button class="btn" id="sendBtn">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div class="card" id="adminPanel" style="display:none;">
+      <div class="hdr">
+        <div>
+          <div class="title">Admin</div>
+          <div class="sub">Force logout • Ban • Rename • Delete</div>
+        </div>
+        <button class="btn ghost small" id="refreshAdmin">Refresh</button>
+      </div>
+      <div class="adminBody">
+        <div>
+          <div class="sectionTitle">Users</div>
+          <div id="usersList" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Name prompt (unique names) -->
+  <div class="modalWrap" id="nameModal" aria-modal="true" role="dialog">
+    <div class="modal">
+      <h2>Pick a unique name</h2>
+      <p>Names must be unique. If someone already has it, pick another.</p>
+      <input id="displayName" placeholder="e.g. Alex" maxlength="24" autocomplete="off" />
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button class="btn" id="saveNameBtn" style="flex:1;">Enter</button>
+        <button class="btn ghost" id="signOutBtn" type="button">Cancel</button>
+      </div>
+      <div class="err" id="nameErr"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import {
+      getFirestore, doc, setDoc, getDoc, updateDoc,
+      collection, addDoc, query, orderBy, onSnapshot,
+      serverTimestamp, limit, getDocs, deleteDoc, runTransaction
+    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
+      authDomain: "darkchatroom-4b547.firebaseapp.com",
+      projectId: "darkchatroom-4b547",
+      storageBucket: "darkchatroom-4b547.firebasestorage.app",
+      messagingSenderId: "764781101022",
+      appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f",
+      measurementId: "G-31LH8LEQ89"
+    };
+
+    initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+
+    const $ = (id) => document.getElementById(id);
+
+    const statusEl = $("status");
+    const mePill = $("mePill");
+    const adminPill = $("adminPill");
+    const signOutTop = $("signOutTop");
+
+    const messagesEl = $("messages");
+    const messageInput = $("messageInput");
+    const sendBtn = $("sendBtn");
+
+    const adminPanel = $("adminPanel");
+    const refreshAdmin = $("refreshAdmin");
+    const usersList = $("usersList");
+
+    const nameModal = $("nameModal");
+    const displayNameEl = $("displayName");
+    const saveNameBtn = $("saveNameBtn");
+    const signOutBtn = $("signOutBtn");
+    const nameErr = $("nameErr");
+
+    const toast = $("toast");
+
+    let me = null;
+    let myProfile = null;
+    let unsubProfile = null;
+    let unsubMessages = null;
+
+    function showToast(text){
+      toast.textContent = text;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2400);
+    }
+
+    function setErr(text){
+      if(!text){ nameErr.style.display = "none"; nameErr.textContent = ""; return; }
+      nameErr.style.display = "block";
+      nameErr.textContent = text;
+    }
+
+    function openNameModal(){
+      setErr("");
+      displayNameEl.value = "";
+      nameModal.classList.add("show");
+      setTimeout(() => displayNameEl.focus(), 30);
+    }
+
+    function closeNameModal(){ nameModal.classList.remove("show"); }
+
+    function fmtTime(ts){
+      if(!ts?.toDate) return "";
+      return ts.toDate().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    }
+
+    function escapeHTML(s){
+      return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    }
+
+    function normalizeName(raw){
+      const display = String(raw || "").trim().replace(/\s+/g, " ");
+      const key = display.toLowerCase();
+      return { display, key };
+    }
+
+    function autoScroll(){
+      const nearBottom = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 140;
+      if(nearBottom) requestAnimationFrame(() => messagesEl.scrollTop = messagesEl.scrollHeight);
+    }
+
+    function cleanupSubs(){
+      if(unsubProfile){unsubProfile(); unsubProfile=null;}
+      if(unsubMessages){unsubMessages(); unsubMessages=null;}
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      cleanupSubs();
+      me = user || null;
+      myProfile = null;
+
+      if(!user){
+        statusEl.textContent = "Signing in…";
+        mePill.textContent = "Not signed in";
+        adminPill.style.display = "none";
+        adminPanel.style.display = "none";
+        await signInAnonymously(auth);
+        return;
+      }
+
+      const uref = doc(db, "users", user.uid);
+      const snap = await getDoc(uref);
+
+      if(!snap.exists()){
+        mePill.textContent = "Choose a name";
+        openNameModal();
+      }else{
+        myProfile = snap.data();
+        mePill.textContent = "You: " + (myProfile.displayName || "?");
+        closeNameModal();
+      }
+
+      unsubProfile = onSnapshot(uref, async (s) => {
+        if(!s.exists()) return;
+        myProfile = s.data();
+
+        mePill.textContent = "You: " + (myProfile.displayName || "?");
+
+        if(myProfile.banned){
+          alert("You are banned.");
+          await signOut(auth);
+          return;
+        }
+
+        if(myProfile.loggedOut){
+          await signOut(auth);
+          return;
+        }
+
+        if(myProfile.isAdmin){
+          adminPill.style.display = "inline-block";
+          adminPanel.style.display = "block";
+        }else{
+          adminPill.style.display = "none";
+          adminPanel.style.display = "none";
+        }
+      });
+
+      const mq = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
+      unsubMessages = onSnapshot(mq, (qs) => {
+        messagesEl.innerHTML = "";
+        let count = 0;
+
+        qs.forEach((d) => {
+          const m = d.data();
+          count++;
+
+          const time = fmtTime(m.createdAt);
+          const name = escapeHTML(m.displayName || "?");
+          const text = escapeHTML(m.text || "");
+
+          const div = document.createElement("div");
+          div.className = "msg";
+
+          const adminTools = (myProfile?.isAdmin === true)
+            ? `<div class="adminMsgRow"><button class="btn danger small" data-delmsg="${d.id}">Delete</button></div>`
+            : "";
+
+          div.innerHTML = `
+            <div class="meta"><div class="name">${name}</div><div>${time}</div></div>
+            <div class="text">${text}</div>
+            ${adminTools}
+          `;
+
+          messagesEl.appendChild(div);
+        });
+
+        statusEl.textContent = `Live • ${count} loaded`;
+        autoScroll();
+      });
+
+      statusEl.textContent = "Live";
     });
 
-  }catch(err){
-    console.error(err);
-    alert("Signup failed. Check console.");
-  }
-};
-/* START */
-function startApp(user){
+    async function saveName(){
+      if(!me) return;
 
-updateProfile();
+      const { display, key } = normalizeName(displayNameEl.value);
 
-onSnapshot(doc(db,"users",user.uid),(snap)=>{
-  currentUserData=snap.data();
-  updateProfile();
-  if(currentUserData.loggedOut){
-    signOut(auth);
-  }
-});
+      setErr("");
+      if(!display) return setErr("Name required.");
+      if(display.length < 2) return setErr("Name too short.");
+      if(display.length > 24) return setErr("Name too long.");
 
-/* MESSAGES */
-const q=query(collection(db,"messages"),orderBy("createdAt"));
-onSnapshot(q,(snap)=>{
-  messages.innerHTML="";
-  snap.forEach(docSnap=>{
-    const d=docSnap.data();
-    const time=d.createdAt?.toDate?
-      new Date(d.createdAt.toDate()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
-      :"";
+      saveNameBtn.disabled = true;
 
-    messages.innerHTML+=`
-    <div class="message">
-      <div class="meta">
-        <div>
-          <strong>${d.firstName}</strong>
-          ${d.verified
-            ?'<span class="verified">✓</span>'
-            :'<span class="unverified">(Unverified)</span>'}
-        </div>
-        <div>${time}</div>
-      </div>
-      ${d.text}
-      ${currentUserData.isAdmin?
-      `<br><button class="danger" onclick="deleteMessage('${docSnap.id}')">Delete</button>`:""}
-    </div>`;
-  });
-});
+      try{
+        const uref = doc(db, "users", me.uid);
+        const nref = doc(db, "usernames", key);
 
-/* ADMIN */
-if(currentUserData.isAdmin){
-adminPanel.style.display="block";
+        await runTransaction(db, async (tx) => {
+          const nSnap = await tx.get(nref);
+          if(nSnap.exists()) throw new Error("NAME_TAKEN");
 
-onSnapshot(collection(db,"users"),(snap)=>{
-loggedInUsers.innerHTML="";
-loggedOutUsers.innerHTML="";
-snap.forEach(d=>{
-const u=d.data();
+          const uSnap = await tx.get(uref);
+          const existing = uSnap.exists() ? uSnap.data() : null;
 
-if(u.loggedOut){
-loggedOutUsers.innerHTML+=`<div class="loggedout">${u.firstName}</div>`;
-}else{
-loggedInUsers.innerHTML+=`
-<div class="userCard">
-<strong>${u.firstName}</strong>
-<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;">
-<button class="adminBtn" onclick="verifyUser('${u.uid}',${!u.verified})">
-${u.verified?"Unverify":"Verify"}
-</button>
-<button class="danger" onclick="banUser('${u.uid}',${!u.banned})">
-${u.banned?"Unban":"Ban"}
-</button>
-<button class="danger" onclick="forceLogout('${u.uid}')">
-Logout
-</button>
-</div>
-</div>`;
-}
-});
-});
-}
-}
+          tx.set(nref, { uid: me.uid, displayName: display, createdAt: serverTimestamp() });
+          tx.set(uref, {
+            uid: me.uid,
+            displayName: display,
+            nameKey: key,
+            banned: false,
+            loggedOut: false,
+            isAdmin: false,
+            createdAt: existing?.createdAt || serverTimestamp()
+          }, { merge: true });
+        });
 
-function updateProfile(){
-profile.innerHTML=
-`<strong>${currentUserData.firstName}</strong>
-<br>Status: ${currentUserData.verified?"Verified":"Unverified"}`;
-}
+        closeNameModal();
+        showToast("Welcome, " + display + "!");
 
-window.sendMessage=async function(){
-const text=messageInput.value.trim();
-if(!text) return;
+      }catch(e){
+        console.error(e);
+        if(String(e?.message || "").includes("NAME_TAKEN")) setErr("That name is already taken.");
+        else setErr("Couldn’t save name. Check console.");
+      }finally{
+        saveNameBtn.disabled = false;
+      }
+    }
 
-await addDoc(collection(db,"messages"),{
-uid:currentUserData.uid,
-firstName:currentUserData.firstName,
-verified:currentUserData.verified,
-text,
-createdAt:serverTimestamp()
-});
-messageInput.value="";
-};
+    saveNameBtn.addEventListener("click", saveName);
+    displayNameEl.addEventListener("keydown", (e) => { if(e.key === "Enter") saveName(); });
 
-window.deleteMessage=id=>deleteDoc(doc(db,"messages",id));
-window.verifyUser=(uid,val)=>updateDoc(doc(db,"users",uid),{verified:val});
-window.forceLogout=uid=>updateDoc(doc(db,"users",uid),{loggedOut:true});
-window.banUser=async(uid,val)=>{
-await updateDoc(doc(db,"users",uid),{banned:val});
-if(val) await updateDoc(doc(db,"users",uid),{loggedOut:true});
-};
-</script>
+    async function send(){
+      if(!me) return;
+      if(!myProfile?.displayName) return openNameModal();
+
+      const text = messageInput.value.trim();
+      if(!text) return;
+
+      sendBtn.disabled = true;
+      try{
+        await addDoc(collection(db, "messages"), {
+          uid: me.uid,
+          displayName: myProfile.displayName,
+          text,
+          createdAt: serverTimestamp()
+        });
+        messageInput.value = "";
+      }catch(e){
+        console.error(e);
+        alert("Send failed. Check console.");
+      }finally{
+        sendBtn.disabled = false;
+        messageInput.focus();
+      }
+    }
+
+    sendBtn.addEventListener("click", send);
+    messageInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+    });
+
+    signOutTop.addEventListener("click", async () => { await signOut(auth); });
+    signOutBtn.addEventListener("click", async () => { await signOut(auth); });
+
+    async function renderAdminUsers(){
+      if(!myProfile?.isAdmin) return;
+
+      const snap = await getDocs(collection(db, "users"));
+      const users = [];
+      snap.forEach((d) => users.push({ id:d.id, ...d.data() }));
+
+      users.sort((a,b) => {
+        const ai = a.isAdmin ? 0 : 1;
+        const bi = b.isAdmin ? 0 : 1;
+        if(ai !== bi) return ai - bi;
+        return String(a.displayName||"").localeCompare(String(b.displayName||""));
+      });
+
+      usersList.innerHTML = "";
+
+      for(const u of users){
+        const isMe = (u.uid === me.uid);
+
+        const flags = [u.isAdmin?"Admin":null, u.banned?"Banned":null, u.loggedOut?"LoggedOut":null]
+          .filter(Boolean).join(" • ");
+
+        const card = document.createElement("div");
+        card.className = "userCard";
+        card.innerHTML = `
+          <div>
+            <div class="uName">${escapeHTML(u.displayName || "(no name)")}</div>
+            <div class="uMeta">${escapeHTML(u.uid?.slice(0,8) || "")} ${flags ? "• " + escapeHTML(flags) : ""}</div>
+            <div class="inlineEdit">
+              <input data-rename="${u.uid}" placeholder="New name" maxlength="24" />
+              <button class="btn ok small" data-renbtn="${u.uid}">Rename</button>
+            </div>
+          </div>
+          <div class="uActions">
+            <button class="btn ghost small" data-logout="${u.uid}" ${isMe ? "disabled" : ""}>Force logout</button>
+            <button class="btn danger small" data-ban="${u.uid}" data-banval="${u.banned ? "0" : "1"}">${u.banned ? "Unban" : "Ban"}</button>
+          </div>
+        `;
+        usersList.appendChild(card);
+      }
+    }
+
+    refreshAdmin.addEventListener("click", renderAdminUsers);
+
+    document.addEventListener("click", async (e) => {
+      const t = e.target;
+      if(!(t instanceof HTMLElement)) return;
+
+      const delId = t.getAttribute("data-delmsg");
+      if(delId && myProfile?.isAdmin){
+        if(!confirm("Delete this message?")) return;
+        await deleteDoc(doc(db, "messages", delId));
+        showToast("Message deleted");
+        return;
+      }
+
+      const logoutUid = t.getAttribute("data-logout");
+      if(logoutUid && myProfile?.isAdmin){
+        if(!confirm("Force logout this user?")) return;
+        await updateDoc(doc(db, "users", logoutUid), { loggedOut: true });
+        showToast("Forced logout");
+        return;
+      }
+
+      const banUid = t.getAttribute("data-ban");
+      if(banUid && myProfile?.isAdmin){
+        const willBan = t.getAttribute("data-banval") === "1";
+        if(!confirm((willBan ? "Ban" : "Unban") + " this user?")) return;
+        await updateDoc(doc(db, "users", banUid), { banned: willBan, loggedOut: willBan ? true : false });
+        showToast(willBan ? "User banned" : "User unbanned");
+        renderAdminUsers();
+        return;
+      }
+
+      const renUid = t.getAttribute("data-renbtn");
+      if(renUid && myProfile?.isAdmin){
+        const input = document.querySelector(`input[data-rename="${CSS.escape(renUid)}"]`);
+        const { display, key } = normalizeName(input?.value || "");
+        if(!display) return alert("Enter a new name.");
+        if(display.length < 2 || display.length > 24) return alert("Name must be 2–24 chars.");
+        if(!confirm(`Change username to "${display}"?`)) return;
+
+        const uref = doc(db, "users", renUid);
+        const newNameRef = doc(db, "usernames", key);
+
+        try{
+          await runTransaction(db, async (tx) => {
+            const uSnap = await tx.get(uref);
+            if(!uSnap.exists()) throw new Error("NO_USER");
+            const u = uSnap.data();
+            const oldKey = u.nameKey;
+
+            const taken = await tx.get(newNameRef);
+            if(taken.exists()) throw new Error("NAME_TAKEN");
+
+            tx.set(newNameRef, { uid: renUid, displayName: display, createdAt: serverTimestamp() });
+            tx.update(uref, { displayName: display, nameKey: key });
+            if(oldKey) tx.delete(doc(db, "usernames", oldKey));
+          });
+
+          showToast("Username changed");
+          renderAdminUsers();
+
+        }catch(err){
+          console.error(err);
+          if(String(err?.message||"").includes("NAME_TAKEN")) alert("That name is already taken.");
+          else alert("Rename failed.");
+        }
+        return;
+      }
+    });
+
+    const adminObserver = new MutationObserver(() => {
+      if(adminPanel.style.display !== "none" && myProfile?.isAdmin) renderAdminUsers();
+    });
+    adminObserver.observe(adminPanel, { attributes:true, attributeFilter:["style"] });
+  </script>
+
+  <!--
+    ✅ FIRESTORE RULES (paste into Firebase Console → Firestore → Rules)
+
+    rules_version = '2';
+    service cloud.firestore {
+      match /databases/{database}/documents {
+
+        function signedIn() {
+          return request.auth != null;
+        }
+
+        function me() {
+          return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        }
+
+        function isAdmin() {
+          return signedIn() && me().isAdmin == true;
+        }
+
+        // Username registry: unique reservation
+        match /usernames/{nameKey} {
+          allow read: if signedIn();
+
+          // Reserve a name if it doesn't exist
+          allow create: if signedIn()
+            && !exists(/databases/$(database)/documents/usernames/$(nameKey))
+            && request.resource.data.keys().hasOnly(['uid','displayName','createdAt'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.displayName is string
+            && request.resource.data.displayName.size() >= 2
+            && request.resource.data.displayName.size() <= 24;
+
+          // Only admin can release names (needed for admin rename)
+          allow delete: if isAdmin();
+          allow update: if false;
+        }
+
+        match /users/{uid} {
+          allow read: if signedIn();
+
+          // Create your profile
+          allow create: if signedIn()
+            && request.auth.uid == uid
+            && request.resource.data.keys().hasOnly(['uid','displayName','nameKey','banned','loggedOut','isAdmin','createdAt'])
+            && request.resource.data.uid == uid
+            && request.resource.data.displayName is string
+            && request.resource.data.displayName.size() >= 2
+            && request.resource.data.displayName.size() <= 24
+            && request.resource.data.nameKey is string
+            && request.resource.data.nameKey.size() >= 2
+            && request.resource.data.nameKey.size() <= 24
+            && request.resource.data.banned == false
+            && request.resource.data.loggedOut == false
+            && request.resource.data.isAdmin == false;
+
+          // Updates:
+          // - Admin can moderate: banned/loggedOut + can rename anyone.
+          // - Users can only rename themselves if they already reserved that username doc.
+          allow update: if (
+              isAdmin()
+              && request.resource.data.keys().hasOnly(['uid','displayName','nameKey','banned','loggedOut','isAdmin','createdAt'])
+            )
+            || (
+              signedIn()
+              && request.auth.uid == uid
+              && request.resource.data.diff(resource.data).changedKeys().hasOnly(['displayName','nameKey'])
+              && exists(/databases/$(database)/documents/usernames/$(request.resource.data.nameKey))
+              && get(/databases/$(database)/documents/usernames/$(request.resource.data.nameKey)).data.uid == request.auth.uid
+              && request.resource.data.displayName is string
+              && request.resource.data.displayName.size() >= 2
+              && request.resource.data.displayName.size() <= 24
+            );
+
+          allow delete: if false;
+        }
+
+        match /messages/{id} {
+          allow read: if signedIn();
+
+          allow create: if signedIn()
+            && me().banned == false
+            && request.resource.data.keys().hasOnly(['uid','displayName','text','createdAt'])
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.displayName == me().displayName
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 2000;
+
+          allow delete: if isAdmin();
+          allow update: if false;
+        }
+      }
+    }
+
+    IMPORTANT:
+    - Make someone admin by manually setting users/{uid}.isAdmin=true in Firestore Console.
+    - Users cannot ban/logout themselves.
+    - Admin can: delete messages, ban/unban, force logout, rename users.
+  -->
 </body>
 </html>
