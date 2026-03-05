@@ -37,8 +37,12 @@ body{
 
 /* Login */
 #login{
-  width:260px;
-  margin:120px auto;
+  width:280px;
+  margin:auto;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
   text-align:center;
 }
 
@@ -215,34 +219,59 @@ onAuthStateChanged(auth,async(user)=>{
 });
 
 /* CREATE ACCOUNT */
-window.createAccount=async function(){
-  const first=firstName.value.trim();
-  const last=lastName.value.trim();
-  if(!first) return alert("First name required");
+window.createAccount = async function(){
 
-  const full=(first+" "+last).trim().toLowerCase();
-  const snap=await getDocs(collection(db,"users"));
+  const first = firstName.value.trim();
+  const last = lastName.value.trim();
 
-  let taken=false;
-  snap.forEach(d=>{
-    const u=d.data();
-    const name=(u.firstName+" "+(u.lastName||"")).trim().toLowerCase();
-    if(name===full) taken=true;
-  });
+  if(!first){
+    alert("First name required");
+    return;
+  }
 
-  if(taken) return alert("Name taken");
+  try{
 
-  const res=await signInAnonymously(auth);
-  const uid=res.user.uid;
+    // 1️⃣ Sign in anonymously FIRST
+    const res = await signInAnonymously(auth);
+    const uid = res.user.uid;
 
-  await setDoc(doc(db,"users",uid),{
-    uid,firstName:first,lastName:last,
-    verified:false,isAdmin:false,
-    banned:false,loggedOut:false,
-    createdAt:serverTimestamp()
-  });
+    localStorage.setItem("uid", uid);
+
+    // 2️⃣ Check duplicate name AFTER auth
+    const fullName = (first + " " + last).trim().toLowerCase();
+    const usersSnap = await getDocs(collection(db,"users"));
+
+    let taken = false;
+    usersSnap.forEach(docSnap=>{
+      const u = docSnap.data();
+      const existing = (u.firstName + " " + (u.lastName||""))
+                        .trim().toLowerCase();
+      if(existing === fullName) taken = true;
+    });
+
+    if(taken){
+      alert("Name already taken");
+      await res.user.delete();   // delete temp auth user
+      return;
+    }
+
+    // 3️⃣ Create user doc
+    await setDoc(doc(db,"users",uid),{
+      uid: uid,
+      firstName: first,
+      lastName: last,
+      verified: false,
+      isAdmin: false,
+      banned: false,
+      loggedOut: false,
+      createdAt: serverTimestamp()
+    });
+
+  }catch(err){
+    console.error(err);
+    alert("Signup failed. Check console.");
+  }
 };
-
 /* START */
 function startApp(user){
 
