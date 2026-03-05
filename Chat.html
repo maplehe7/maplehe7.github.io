@@ -175,7 +175,8 @@
     flex:1;
     overflow-y:auto;
     padding:12px;
-    scroll-behavior:smooth;
+    scroll-behavior:auto;
+    contain:layout style paint;
   }
 
   /* message */
@@ -186,6 +187,8 @@
     border:1px solid rgba(148,163,184,.16);
     background:rgba(2,6,23,.55);
     margin:10px 0;
+    content-visibility:auto;
+    contain-intrinsic-size:72px;
   }
 
   .meta{
@@ -398,6 +401,8 @@
     display:flex;
     justify-content:space-between;
     gap:10px;
+    content-visibility:auto;
+    contain-intrinsic-size:130px;
   }
 
   .userCard .uName{ font-weight:900; }
@@ -405,13 +410,17 @@
 
   .inlineEdit{
     display:flex;
-    gap:8px;
+    gap:10px;
     margin-top:10px;
+    align-items:stretch;
+    flex-wrap:wrap;
   }
 
   .inlineEdit input{
-    flex:1;
-    padding:10px;
+    flex:1 1 220px;
+    min-width:180px;
+    width:100%;
+    padding:12px 14px;
     border-radius:12px;
     border:1px solid rgba(148,163,184,.22);
     background:rgba(2,6,23,.55);
@@ -423,11 +432,27 @@
   .inlineEdit input:focus{ border-color:rgba(74,134,232,.45); }
 
   .uActions{
-    display:flex;
-    flex-wrap:wrap;
+    display:grid;
+    grid-template-columns:repeat(2, minmax(120px, 1fr));
     gap:8px;
-    justify-content:flex-end;
     align-content:flex-start;
+    min-width:260px;
+  }
+
+  .uActions .btn{
+    width:100%;
+    white-space:nowrap;
+  }
+
+  @media (max-width:560px){
+    .userCard{
+      flex-direction:column;
+    }
+
+    .uActions{
+      grid-template-columns:1fr;
+      min-width:0;
+    }
   }
 
   /* toast */
@@ -556,8 +581,11 @@
       onSnapshot,
       serverTimestamp,
       limit,
+      limitToLast,
       deleteDoc,
-      runTransaction
+      runTransaction,
+      writeBatch,
+      getDocs
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     // ---- Firebase config (yours)
@@ -622,6 +650,96 @@
     }
     const deviceId = getDeviceId();
 
+    // ---- Local device account cache (auto-login)
+    // Stores the last known profile tied to (deviceId, uid).
+    const ACCOUNT_KEY = "mgc_account";
+
+    function loadSavedAccount() {
+      try {
+        const raw = localStorage.getItem(ACCOUNT_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj !== "object") return null;
+        return {
+          uid: typeof obj.uid === "string" ? obj.uid : null,
+          deviceId: typeof obj.deviceId === "string" ? obj.deviceId : null,
+          displayName: typeof obj.displayName === "string" ? obj.displayName : null,
+          nameKey: typeof obj.nameKey === "string" ? obj.nameKey : null
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    function saveAccountToDevice(profile) {
+      if (!me?.uid || !profile) return;
+      const displayName = typeof profile.displayName === "string" ? profile.displayName : "";
+      const nameKey = typeof profile.nameKey === "string" ? profile.nameKey : "";
+      try {
+        localStorage.setItem(ACCOUNT_KEY, JSON.stringify({
+          uid: me.uid,
+          deviceId,
+          displayName,
+          nameKey,
+          savedAt: Date.now()
+        }));
+      } catch (e) {
+        console.warn("Could not save account to device", e);
+      }
+    }
+
+    async function tryAutoRestoreProfile(currentUid) {
+      const saved = loadSavedAccount();
+      if (!saved) return false;
+
+      // Auto-login if EITHER uid matches OR deviceId matches.
+      const matches = (saved.uid && saved.uid === currentUid) || (saved.deviceId && saved.deviceId === deviceId);
+      if (!matches) return false;
+
+      if (!saved.displayName || !saved.nameKey) return false;
+
+      const uref = doc(db, "users", currentUid);
+      const nref = doc(db, "usernames", saved.nameKey);
+
+      try {
+        await runTransaction(db, async (tx) => {
+          const uSnap = await tx.get(uref);
+          if (uSnap.exists()) return;
+
+          const nSnap = await tx.get(nref);
+          if (nSnap.exists() && nSnap.data()?.uid !== currentUid) {
+            throw new Error("NAME_TAKEN");
+          }
+
+          if (!nSnap.exists()) {
+            tx.set(nref, {
+              uid: currentUid,
+              displayName: saved.displayName,
+              createdAt: serverTimestamp()
+            });
+          }
+
+          // Create a minimal profile consistent with rules.
+          tx.set(uref, {
+            uid: currentUid,
+            displayName: saved.displayName,
+            nameKey: saved.nameKey,
+            deviceId: deviceId,
+            verified: false,
+            banned: false,
+            loggedOut: false,
+            isAdmin: false,
+            createdAt: serverTimestamp()
+          }, { merge: true });
+        });
+
+        return true;
+      } catch (e) {
+        console.warn("Auto-restore failed", e);
+        return false;
+      }
+    }
+
     // ---- State
     let me = null;
     let myProfile = null;
@@ -635,6 +753,9 @@
 
     // ✅ NEW: ensures we scroll to bottom on first load
     let didInitialScroll = false;
+    let lastMessageRenderKey = "";
+    let usersRenderQueued = false;
+    let adminSearchTimer = null;
 
     function showToast(text) {
       toast.textContent = text;
@@ -684,6 +805,59 @@
       return { display, key };
     }
 
+    function canDeleteUser(uid) {
+      return myProfile?.isAdmin === true && !!uid && uid !== me?.uid;
+    }
+
+    async function deleteUserEverywhere(uid) {
+      if (!canDeleteUser(uid)) throw new Error("CANNOT_DELETE_USER");
+
+      const uref = doc(db, "users", uid);
+      const userSnap = await getDoc(uref);
+      if (!userSnap.exists()) throw new Error("NO_USER");
+
+      const userData = userSnap.data() || {};
+      const nameKey = userData.nameKey || null;
+      const targetDeviceId = userData.deviceId || null;
+
+      const msgSnap = await getDocs(query(collection(db, "messages"), orderBy("createdAt"), limit(200)));
+      const relatedMessages = [];
+      msgSnap.forEach((d) => {
+        const msg = d.data();
+        if (msg.uid === uid) relatedMessages.push(d.id);
+      });
+
+      let batch = writeBatch(db);
+      let ops = 0;
+      const commitBatch = async () => {
+        if (ops > 0) {
+          await batch.commit();
+          batch = writeBatch(db);
+          ops = 0;
+        }
+      };
+
+      if (nameKey) {
+        batch.delete(doc(db, "usernames", nameKey));
+        ops++;
+      }
+
+      if (targetDeviceId) {
+        batch.delete(doc(db, "bannedDevices", targetDeviceId));
+        ops++;
+      }
+
+      for (const mid of relatedMessages) {
+        batch.delete(doc(db, "messages", mid));
+        ops++;
+        if (ops >= 450) await commitBatch();
+      }
+
+      batch.delete(uref);
+      ops++;
+      await commitBatch();
+    }
+
     // ✅ NEW: force scroll to bottom (used on initial load)
     function scrollToBottomNow() {
       messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -695,6 +869,34 @@
       if (nearBottom) requestAnimationFrame(() => messagesEl.scrollTop = messagesEl.scrollHeight);
     }
 
+    function buildMessageRenderKey(qs) {
+      const parts = [];
+      qs.forEach((d) => {
+        const m = d.data();
+        const u = userCache.get(m.uid) || {};
+        parts.push([
+          d.id,
+          m.uid || "",
+          u.displayName || "",
+          u.verified ? "1" : "0",
+          m.text || "",
+          m.createdAt?.seconds || "",
+          m.createdAt?.nanoseconds || ""
+        ].join("|"));
+      });
+      return parts.join("~");
+    }
+
+    function queueAdminUsersRender() {
+      if (!myProfile?.isAdmin || adminPanel.style.display === "none") return;
+      if (usersRenderQueued) return;
+      usersRenderQueued = true;
+      requestAnimationFrame(() => {
+        usersRenderQueued = false;
+        renderAdminUsers();
+      });
+    }
+
     function cleanupSubs() {
       if (unsubProfile) { unsubProfile(); unsubProfile = null; }
       if (unsubMessages) { unsubMessages(); unsubMessages = null; }
@@ -703,6 +905,12 @@
       lastMessagesSnapshot = null;
       liveUsers = [];
       didInitialScroll = false; // ✅ reset on auth/session changes
+      lastMessageRenderKey = "";
+      usersRenderQueued = false;
+      if (adminSearchTimer) {
+        clearTimeout(adminSearchTimer);
+        adminSearchTimer = null;
+      }
     }
 
     function setBlocked(mode) {
@@ -720,12 +928,27 @@
     }
 
     function renderMessagesFromSnapshot(qs, { forceBottom = false } = {}) {
-      messagesEl.innerHTML = "";
+      const renderKey = buildMessageRenderKey(qs);
       let count = 0;
+      qs.forEach(() => { count++; });
+
+      if (renderKey === lastMessageRenderKey) {
+        statusEl.textContent = `Live • ${count} loaded`;
+        if (forceBottom) {
+          requestAnimationFrame(() => {
+            scrollToBottomNow();
+            requestAnimationFrame(scrollToBottomNow);
+          });
+        }
+        return;
+      }
+
+      lastMessageRenderKey = renderKey;
+      messagesEl.innerHTML = "";
+      const frag = document.createDocumentFragment();
 
       qs.forEach((d) => {
         const m = d.data();
-        count++;
 
         const time = fmtTime(m.createdAt);
         const u = userCache.get(m.uid) || {};
@@ -752,18 +975,15 @@
           ${adminTools}
         `;
 
-        messagesEl.appendChild(div);
+        frag.appendChild(div);
       });
 
+      messagesEl.appendChild(frag);
       statusEl.textContent = `Live • ${count} loaded`;
 
-      // ✅ NEW behavior:
-      // - on first load (forceBottom) scroll all the way down
-      // - after that, only auto-scroll if user is near the bottom
       if (forceBottom) {
         requestAnimationFrame(() => {
           scrollToBottomNow();
-          // second frame helps after fonts/layout settle
           requestAnimationFrame(scrollToBottomNow);
         });
       } else {
@@ -840,6 +1060,10 @@
             <button class="btn danger small" data-ban="${uid}" data-banval="${u.banned ? "0" : "1"}">
               ${u.banned ? "Unban" : "Ban"}
             </button>
+
+            <button class="btn danger small" data-deleteuser="${uid}" ${canDeleteUser(uid) ? "" : "disabled"}>
+              Delete user
+            </button>
           </div>
         `;
 
@@ -847,9 +1071,16 @@
       }
     }
 
-    refreshAdmin.addEventListener("click", renderAdminUsers);
-    adminSearch.addEventListener("input", renderAdminUsers);
-    clearSearch.addEventListener("click", () => { adminSearch.value = ""; renderAdminUsers(); });
+    refreshAdmin.addEventListener("click", () => queueAdminUsersRender());
+    adminSearch.addEventListener("input", () => {
+      if (adminSearchTimer) clearTimeout(adminSearchTimer);
+      adminSearchTimer = setTimeout(() => queueAdminUsersRender(), 90);
+    });
+    clearSearch.addEventListener("click", () => {
+      adminSearch.value = "";
+      if (adminSearchTimer) clearTimeout(adminSearchTimer);
+      queueAdminUsersRender();
+    });
 
     onAuthStateChanged(auth, async (user) => {
       cleanupSubs();
@@ -889,17 +1120,36 @@
       const snap = await getDoc(uref);
 
       if (!snap.exists()) {
-        mePill.textContent = "Choose a name";
-        openNameModal();
+        // Attempt auto-restore from the device cache if uid OR deviceId matches.
+        const restored = await tryAutoRestoreProfile(user.uid);
+        if (restored) {
+          const post = await getDoc(uref);
+          if (post.exists()) {
+            myProfile = post.data();
+            mePill.textContent = "You: " + (myProfile.displayName || "?");
+            saveAccountToDevice(myProfile);
+            closeNameModal();
+          } else {
+            mePill.textContent = "Choose a name";
+            openNameModal();
+          }
+        } else {
+          mePill.textContent = "Choose a name";
+          openNameModal();
+        }
       } else {
         myProfile = snap.data();
         mePill.textContent = "You: " + (myProfile.displayName || "?");
+        saveAccountToDevice(myProfile);
         closeNameModal();
       }
 
       unsubProfile = onSnapshot(uref, (s) => {
         if (!s.exists()) return;
         myProfile = s.data();
+
+        // Keep local device cache fresh (uid + deviceId + name).
+        saveAccountToDevice(myProfile);
 
         mePill.textContent = "You: " + (myProfile.displayName || "?");
 
@@ -931,6 +1181,7 @@
       });
 
       unsubUsers = onSnapshot(collection(db, "users"), (qs) => {
+        const prevUserSig = JSON.stringify(Array.from(userCache.entries()));
         userCache.clear();
         liveUsers = [];
 
@@ -962,17 +1213,18 @@
           });
         });
 
-        if (lastMessagesSnapshot) {
+        const nextUserSig = JSON.stringify(Array.from(userCache.entries()));
+        const usersChanged = prevUserSig !== nextUserSig;
+
+        if (lastMessagesSnapshot && usersChanged) {
           renderMessagesFromSnapshot(lastMessagesSnapshot, { forceBottom: !didInitialScroll });
           didInitialScroll = true;
         }
 
-        if (myProfile?.isAdmin && adminPanel.style.display !== "none") {
-          renderAdminUsers();
-        }
+        queueAdminUsersRender();
       });
 
-      const mq = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
+      const mq = query(collection(db, "messages"), orderBy("createdAt"), limitToLast(200));
       unsubMessages = onSnapshot(mq, (qs) => {
         lastMessagesSnapshot = qs;
 
@@ -1021,6 +1273,9 @@
             createdAt: existing?.createdAt || serverTimestamp()
           }, { merge: true });
         });
+
+        // Persist account mapping on device (uid + deviceId)
+        saveAccountToDevice({ displayName: display, nameKey: key });
 
         closeNameModal();
         showToast("Created. Waiting for verify.");
@@ -1174,6 +1429,28 @@
         return;
       }
 
+      const deleteUserUid = t.getAttribute("data-deleteuser");
+      if (deleteUserUid) {
+        if (!canDeleteUser(deleteUserUid)) {
+          showToast("You can’t delete this user");
+          return;
+        }
+
+        const target = liveUsers.find((u) => (u.uid || u.id) === deleteUserUid);
+        const label = target?.displayName || "this user";
+        const ok = window.confirm(`Delete ${label} from users, usernames, messages, and device bans? This cannot be undone.`);
+        if (!ok) return;
+
+        try {
+          await deleteUserEverywhere(deleteUserUid);
+          showToast("User deleted");
+        } catch (err) {
+          console.error(err);
+          showToast("Delete user failed");
+        }
+        return;
+      }
+
       const renUid = t.getAttribute("data-renbtn");
       if (renUid) {
         const input = document.querySelector(`input[data-rename="${CSS.escape(renUid)}"]`);
@@ -1213,7 +1490,7 @@
     });
 
     const adminObserver = new MutationObserver(() => {
-      if (adminPanel.style.display !== "none" && myProfile?.isAdmin) renderAdminUsers();
+      if (adminPanel.style.display !== "none" && myProfile?.isAdmin) queueAdminUsersRender();
     });
     adminObserver.observe(adminPanel, { attributes: true, attributeFilter: ["style"] });
   </script>
