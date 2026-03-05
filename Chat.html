@@ -356,30 +356,13 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
     import {
-      getAuth,
-      signInAnonymously,
-      onAuthStateChanged,
-      signOut
-    } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import {
-      getFirestore,
-      doc,
-      setDoc,
-      getDoc,
-      updateDoc,
-      collection,
-      addDoc,
-      query,
-      orderBy,
-      onSnapshot,
-      serverTimestamp,
-      limit,
-      getDocs,
-      deleteDoc,
-      runTransaction
+      getFirestore, doc, setDoc, getDoc, updateDoc,
+      collection, addDoc, query, orderBy, onSnapshot,
+      serverTimestamp, limit, getDocs, deleteDoc, runTransaction
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-  
+
     // ---- Firebase config (yours)
     const firebaseConfig = {
       apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
@@ -390,119 +373,107 @@
       appId: "1:764781101022:web:ac3d6ac8e76d4258fda74f",
       measurementId: "G-31LH8LEQ89"
     };
-  
+
     initializeApp(firebaseConfig);
     const auth = getAuth();
     const db = getFirestore();
-  
+
     // ---- DOM
     const $ = (id) => document.getElementById(id);
-  
+
     const statusEl = $("status");
     const mePill = $("mePill");
     const adminPill = $("adminPill");
     const signOutTop = $("signOutTop");
-  
+
     const messagesEl = $("messages");
     const messageInput = $("messageInput");
     const sendBtn = $("sendBtn");
-  
+
     const blockedOverlay = $("blockedOverlay");
     const blockedTitle = $("blockedTitle");
     const blockedText = $("blockedText");
     const blockedSignOut = $("blockedSignOut");
-  
+
     const adminPanel = $("adminPanel");
     const refreshAdmin = $("refreshAdmin");
     const usersList = $("usersList");
     const adminSearch = $("adminSearch");
     const clearSearch = $("clearSearch");
-  
+
     const nameModal = $("nameModal");
     const displayNameEl = $("displayName");
     const saveNameBtn = $("saveNameBtn");
     const signOutBtn = $("signOutBtn");
     const nameErr = $("nameErr");
-  
+
     const toast = $("toast");
-  
+
     // ---- State
     let me = null;
     let myProfile = null;
     let unsubProfile = null;
     let unsubMessages = null;
     let unsubUsers = null;
-  
-    // user cache for rendering (uid -> {displayName, verified, banned, loggedOut})
+
+    // cache uid -> info for rendering
     const userCache = new Map();
-  
-    // store last messages snapshot so UI updates when userCache changes (rename/verify)
+
+    // store last messages snapshot so rename/verify instantly updates old messages
     let lastMessagesSnapshot = null;
-  
-    function showToast(text) {
+
+    function showToast(text){
       toast.textContent = text;
       toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 2400);
+      setTimeout(() => toast.classList.remove("show"), 2200);
     }
-  
-    function setErr(text) {
-      if (!text) {
-        nameErr.style.display = "none";
-        nameErr.textContent = "";
-        return;
-      }
+
+    function setErr(text){
+      if(!text){ nameErr.style.display = "none"; nameErr.textContent = ""; return; }
       nameErr.style.display = "block";
       nameErr.textContent = text;
     }
-  
-    function openNameModal() {
+
+    function openNameModal(){
       setErr("");
       displayNameEl.value = "";
       nameModal.classList.add("show");
       setTimeout(() => displayNameEl.focus(), 30);
     }
-  
-    function closeNameModal() {
-      nameModal.classList.remove("show");
+
+    function closeNameModal(){ nameModal.classList.remove("show"); }
+
+    function fmtTime(ts){
+      if(!ts?.toDate) return "";
+      return ts.toDate().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
     }
-  
-    function fmtTime(ts) {
-      if (!ts?.toDate) return "";
-      return ts.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    function escapeHTML(s){
+      return String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
     }
-  
-    function escapeHTML(s) {
-      return String(s || "").replace(/[&<>"']/g, (c) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "\"": "&quot;",
-        "'": "&#39;"
-      }[c]));
-    }
-  
-    function normalizeName(raw) {
+
+    function normalizeName(raw){
       const display = String(raw || "").trim().replace(/\s+/g, " ");
       const key = display.toLowerCase();
       return { display, key };
     }
-  
-    function autoScroll() {
+
+    function autoScroll(){
       const nearBottom = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 140;
-      if (nearBottom) requestAnimationFrame(() => messagesEl.scrollTop = messagesEl.scrollHeight);
+      if(nearBottom) requestAnimationFrame(() => messagesEl.scrollTop = messagesEl.scrollHeight);
     }
-  
-    function cleanupSubs() {
-      if (unsubProfile) { unsubProfile(); unsubProfile = null; }
-      if (unsubMessages) { unsubMessages(); unsubMessages = null; }
-      if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+
+    function cleanupSubs(){
+      if(unsubProfile){unsubProfile(); unsubProfile=null;}
+      if(unsubMessages){unsubMessages(); unsubMessages=null;}
+      if(unsubUsers){unsubUsers(); unsubUsers=null;}
       userCache.clear();
       lastMessagesSnapshot = null;
     }
-  
-    function setBlocked(mode) {
+
+    function setBlocked(mode){
       // mode: null | {title, text}
-      if (!mode) {
+      if(!mode){
         blockedOverlay.classList.remove("show");
         sendBtn.disabled = false;
         messageInput.disabled = false;
@@ -514,31 +485,31 @@
       sendBtn.disabled = true;
       messageInput.disabled = true;
     }
-  
-    function renderMessagesFromSnapshot(qs) {
+
+    function renderMessagesFromSnapshot(qs){
       messagesEl.innerHTML = "";
       let count = 0;
-  
+
       qs.forEach((d) => {
         const m = d.data();
         count++;
-  
+
         const time = fmtTime(m.createdAt);
         const u = userCache.get(m.uid) || {};
         const name = escapeHTML(u.displayName || "?");
         const verified = u.verified === true;
-  
+
         const div = document.createElement("div");
         div.className = "msg";
-  
+
         const vTag = verified
           ? `<span class="tag v">Verified</span>`
           : `<span class="tag unv">Unverified</span>`;
-  
+
         const adminTools = (myProfile?.isAdmin === true)
           ? `<div class="adminMsgRow"><button class="btn danger small" data-delmsg="${d.id}">Delete</button></div>`
           : "";
-  
+
         div.innerHTML = `
           <div class="meta">
             <div class="nameRow"><span class="name">${name}</span>${vTag}</div>
@@ -547,14 +518,14 @@
           <div class="text">${escapeHTML(m.text || "")}</div>
           ${adminTools}
         `;
-  
+
         messagesEl.appendChild(div);
       });
-  
+
       statusEl.textContent = `Live • ${count} loaded`;
       autoScroll();
     }
-  
+
     // ----------------------
     // Auth bootstrap
     // ----------------------
@@ -562,8 +533,8 @@
       cleanupSubs();
       me = user || null;
       myProfile = null;
-  
-      if (!user) {
+
+      if(!user){
         statusEl.textContent = "Signing in…";
         mePill.textContent = "Not signed in";
         adminPill.style.display = "none";
@@ -572,58 +543,58 @@
         await signInAnonymously(auth);
         return;
       }
-  
+
       // load profile
       const uref = doc(db, "users", user.uid);
       const snap = await getDoc(uref);
-  
-      if (!snap.exists()) {
+
+      if(!snap.exists()){
         mePill.textContent = "Choose a name";
         openNameModal();
-      } else {
+      }else{
         myProfile = snap.data();
         mePill.textContent = "You: " + (myProfile.displayName || "?");
         closeNameModal();
       }
-  
+
       // watch my profile
       unsubProfile = onSnapshot(uref, (s) => {
-        if (!s.exists()) return;
+        if(!s.exists()) return;
         myProfile = s.data();
-  
+
         mePill.textContent = "You: " + (myProfile.displayName || "?");
-  
+
         // Admin UI
-        if (myProfile.isAdmin) {
+        if(myProfile.isAdmin){
           adminPill.style.display = "inline-block";
           adminPanel.style.display = "block";
-        } else {
+        }else{
           adminPill.style.display = "none";
           adminPanel.style.display = "none";
         }
-  
-        // Block conditions (do NOT sign out, so admin can restore)
-        if (myProfile.banned) {
+
+        // Block conditions (do NOT sign out; admin can clear flags)
+        if(myProfile.banned){
           setBlocked({ title: "Banned", text: "An admin has banned this account." });
           return;
         }
-  
-        if (myProfile.loggedOut) {
+
+        if(myProfile.loggedOut){
           setBlocked({ title: "Logged out", text: "An admin logged you out. Ask an admin to clear it." });
           return;
         }
-  
+
         setBlocked(null);
       });
-  
+
       // users cache (needed for verified labels + display names)
-      // ✅ Use doc.id as uid so legacy docs missing `uid` still work
+      // ✅ Use doc.id as uid (works even if legacy docs missing `uid` field)
       unsubUsers = onSnapshot(collection(db, "users"), (qs) => {
         userCache.clear();
         qs.forEach((d) => {
           const u = d.data();
           const uid = d.id;
-  
+
           userCache.set(uid, {
             displayName: u.displayName,
             verified: u.verified === true,
@@ -632,50 +603,50 @@
             isAdmin: u.isAdmin === true
           });
         });
-  
-        // ✅ Re-render messages when names/verified change (rename/verify updates)
-        if (lastMessagesSnapshot) renderMessagesFromSnapshot(lastMessagesSnapshot);
+
+        // ✅ Re-render messages when names/verified change
+        if(lastMessagesSnapshot) renderMessagesFromSnapshot(lastMessagesSnapshot);
       });
-  
+
       // messages
       const mq = query(collection(db, "messages"), orderBy("createdAt"), limit(200));
       unsubMessages = onSnapshot(mq, (qs) => {
-        lastMessagesSnapshot = qs; // ✅ store last snapshot
+        lastMessagesSnapshot = qs; // ✅ store
         renderMessagesFromSnapshot(qs);
       });
-  
+
       statusEl.textContent = "Live";
     });
-  
+
     // ----------------------
     // Create account (unique name) + start unverified
     // ----------------------
-    async function saveName() {
-      if (!me) return;
-  
+    async function saveName(){
+      if(!me) return;
+
       const { display, key } = normalizeName(displayNameEl.value);
-  
+
       setErr("");
-      if (!display) return setErr("Name required.");
-      if (display.length < 2) return setErr("Name too short.");
-      if (display.length > 24) return setErr("Name too long.");
-  
+      if(!display) return setErr("Name required.");
+      if(display.length < 2) return setErr("Name too short.");
+      if(display.length > 24) return setErr("Name too long.");
+
       saveNameBtn.disabled = true;
-  
-      try {
+
+      try{
         const uref = doc(db, "users", me.uid);
         const nref = doc(db, "usernames", key);
-  
+
         await runTransaction(db, async (tx) => {
           const nSnap = await tx.get(nref);
-          if (nSnap.exists()) throw new Error("NAME_TAKEN");
-  
+          if(nSnap.exists()) throw new Error("NAME_TAKEN");
+
           const uSnap = await tx.get(uref);
           const existing = uSnap.exists() ? uSnap.data() : null;
-  
+
           // Reserve name
           tx.set(nref, { uid: me.uid, displayName: display, createdAt: serverTimestamp() });
-  
+
           // Create/merge profile (unverified)
           tx.set(uref, {
             uid: me.uid,
@@ -688,105 +659,105 @@
             createdAt: existing?.createdAt || serverTimestamp()
           }, { merge: true });
         });
-  
+
         closeNameModal();
         showToast("Created. Waiting for verify.");
-  
-      } catch (e) {
+
+      }catch(e){
         console.error(e);
-        if (String(e?.message || "").includes("NAME_TAKEN")) setErr("That name is already taken.");
+        if(String(e?.message || "").includes("NAME_TAKEN")) setErr("That name is already taken.");
         else setErr("Couldn’t create account. Check console.");
-      } finally {
+      }finally{
         saveNameBtn.disabled = false;
       }
     }
-  
+
     saveNameBtn.addEventListener("click", saveName);
-    displayNameEl.addEventListener("keydown", (e) => { if (e.key === "Enter") saveName(); });
-  
+    displayNameEl.addEventListener("keydown", (e) => { if(e.key === "Enter") saveName(); });
+
     // ----------------------
     // Send message
     // ----------------------
-    async function send() {
-      if (!me) return;
-      if (!myProfile?.displayName) return openNameModal();
-      if (myProfile.banned || myProfile.loggedOut) return;
-  
+    async function send(){
+      if(!me) return;
+      if(!myProfile?.displayName) return openNameModal();
+      if(myProfile.banned || myProfile.loggedOut) return;
+
       const text = messageInput.value.trim();
-      if (!text) return;
-  
+      if(!text) return;
+
       sendBtn.disabled = true;
-      try {
+      try{
         await addDoc(collection(db, "messages"), {
           uid: me.uid,
           text,
           createdAt: serverTimestamp()
         });
         messageInput.value = "";
-      } catch (e) {
+      }catch(e){
         console.error(e);
-        alert("Send failed. Check rules/console.");
-      } finally {
+        showToast("Send failed (rules?)");
+      }finally{
         sendBtn.disabled = false;
         messageInput.focus();
       }
     }
-  
+
     sendBtn.addEventListener("click", send);
     messageInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+      if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
     });
-  
+
     // ----------------------
     // Sign out
     // ----------------------
     signOutTop.addEventListener("click", async () => { await signOut(auth); });
     signOutBtn.addEventListener("click", async () => { await signOut(auth); });
     blockedSignOut.addEventListener("click", async () => { await signOut(auth); });
-  
+
     // ----------------------
     // Admin panel
     // ----------------------
-    async function renderAdminUsers() {
-      if (!myProfile?.isAdmin) return;
-  
+    async function renderAdminUsers(){
+      if(!myProfile?.isAdmin) return;
+
       const snap = await getDocs(collection(db, "users"));
       const users = [];
-      snap.forEach((d) => users.push({ id: d.id, ...d.data() }));
-  
+      snap.forEach((d) => users.push({ id:d.id, ...d.data() }));
+
       const q = (adminSearch.value || "").trim().toLowerCase();
-  
+
       const filtered = q
         ? users.filter(u =>
-            String(u.displayName || "").toLowerCase().includes(q) ||
+            String(u.displayName||"").toLowerCase().includes(q) ||
             String(u.uid || u.id || "").toLowerCase().includes(q)
           )
         : users;
-  
+
       // Sort: unverified first, then name
-      filtered.sort((a, b) => {
+      filtered.sort((a,b) => {
         const av = a.verified ? 1 : 0;
         const bv = b.verified ? 1 : 0;
-        if (av !== bv) return av - bv;
-        return String(a.displayName || "").localeCompare(String(b.displayName || ""));
+        if(av !== bv) return av - bv;
+        return String(a.displayName||"").localeCompare(String(b.displayName||""));
       });
-  
+
       usersList.innerHTML = "";
-  
-      for (const u of filtered) {
-        const uid = u.uid || u.id; // ✅ always have a uid
+
+      for(const u of filtered){
+        const uid = u.uid || u.id; // ✅ always have
         const isMe = (uid === me.uid);
-  
+
         const flags = [
           u.isAdmin ? "Admin" : null,
           u.verified ? "Verified" : "Unverified",
           u.banned ? "Banned" : null,
           u.loggedOut ? "LoggedOut" : null
         ].filter(Boolean).join(" • ");
-  
+
         const card = document.createElement("div");
         card.className = "userCard";
-  
+
         card.innerHTML = `
           <div>
             <div class="uName">${escapeHTML(u.displayName || "(no name)")}</div>
@@ -796,7 +767,7 @@
               <button class="btn ok small" data-renbtn="${uid}">Rename</button>
             </div>
           </div>
-  
+
           <div class="uActions">
             <button class="btn ghost small" data-verify="${uid}" data-verifyval="${u.verified ? "0" : "1"}">${u.verified ? "Unverify" : "Verify"}</button>
             <button class="btn ghost small" data-clearlogout="${uid}" ${u.loggedOut ? "" : "disabled"}>Clear logout</button>
@@ -804,255 +775,153 @@
             <button class="btn danger small" data-ban="${uid}" data-banval="${u.banned ? "0" : "1"}">${u.banned ? "Unban" : "Ban"}</button>
           </div>
         `;
-  
+
         usersList.appendChild(card);
       }
     }
-  
+
     refreshAdmin.addEventListener("click", renderAdminUsers);
     adminSearch.addEventListener("input", () => renderAdminUsers());
     clearSearch.addEventListener("click", () => { adminSearch.value = ""; renderAdminUsers(); });
-  
-    // Delegate admin actions
+
+    // Delegate admin actions (NO confirm/alert; sandbox-safe)
     document.addEventListener("click", async (e) => {
       const t = e.target;
-      if (!(t instanceof HTMLElement)) return;
-  
+      if(!(t instanceof HTMLElement)) return;
+      if(!myProfile?.isAdmin) return;
+
       // Delete message
       const delId = t.getAttribute("data-delmsg");
-      if (delId && myProfile?.isAdmin) {
-        if (!confirm("Delete this message?")) return;
-        try {
+      if(delId){
+        try{
           await deleteDoc(doc(db, "messages", delId));
           showToast("Message deleted");
-        } catch (err) {
+        }catch(err){
           console.error(err);
-          alert("Delete failed. Check rules.");
+          showToast("Delete failed (rules?)");
         }
         return;
       }
-  
+
       // Verify / unverify
       const vUid = t.getAttribute("data-verify");
-      if (vUid && myProfile?.isAdmin) {
+      if(vUid){
         const val = t.getAttribute("data-verifyval") === "1";
-        try {
+        try{
           await updateDoc(doc(db, "users", vUid), { verified: val });
           showToast(val ? "Verified" : "Unverified");
           renderAdminUsers();
-        } catch (err) {
+        }catch(err){
           console.error(err);
-          alert("Verify failed.");
+          showToast("Verify failed (rules?)");
         }
         return;
       }
-  
+
       // Clear logout
       const clrUid = t.getAttribute("data-clearlogout");
-      if (clrUid && myProfile?.isAdmin) {
-        try {
+      if(clrUid){
+        try{
           await updateDoc(doc(db, "users", clrUid), { loggedOut: false });
           showToast("Logout cleared");
           renderAdminUsers();
-        } catch (err) {
+        }catch(err){
           console.error(err);
-          alert("Clear logout failed.");
+          showToast("Clear logout failed");
         }
         return;
       }
-  
+
       // Force logout
       const logoutUid = t.getAttribute("data-logout");
-      if (logoutUid && myProfile?.isAdmin) {
-        if (!confirm("Force logout this user?")) return;
-        try {
+      if(logoutUid){
+        try{
           await updateDoc(doc(db, "users", logoutUid), { loggedOut: true });
           showToast("Forced logout");
           renderAdminUsers();
-        } catch (err) {
+        }catch(err){
           console.error(err);
-          alert("Force logout failed.");
+          showToast("Force logout failed");
         }
         return;
       }
-  
+
       // Ban / unban
       const banUid = t.getAttribute("data-ban");
-      if (banUid && myProfile?.isAdmin) {
+      if(banUid){
         const willBan = t.getAttribute("data-banval") === "1";
-        if (!confirm((willBan ? "Ban" : "Unban") + " this user?")) return;
-        try {
+        try{
           await updateDoc(doc(db, "users", banUid), {
             banned: willBan,
             loggedOut: willBan ? true : false
           });
           showToast(willBan ? "User banned" : "User unbanned");
           renderAdminUsers();
-        } catch (err) {
+        }catch(err){
           console.error(err);
-          alert("Ban/unban failed.");
+          showToast("Ban/unban failed");
         }
         return;
       }
-  
-      // Rename (admin)
+
+      // Rename
       const renUid = t.getAttribute("data-renbtn");
-      if (renUid && myProfile?.isAdmin) {
+      if(renUid){
         const input = document.querySelector(`input[data-rename="${CSS.escape(renUid)}"]`);
         const { display, key } = normalizeName(input?.value || "");
-        if (!display) return alert("Enter a new name.");
-        if (display.length < 2 || display.length > 24) return alert("Name must be 2–24 chars.");
-        if (!confirm(`Change username to "${display}"?`)) return;
-  
+        if(!display){ showToast("Enter a name"); return; }
+        if(display.length < 2 || display.length > 24){ showToast("Name must be 2–24 chars"); return; }
+
         const uref = doc(db, "users", renUid);
         const newNameRef = doc(db, "usernames", key);
-  
-        try {
+
+        try{
           await runTransaction(db, async (tx) => {
             const uSnap = await tx.get(uref);
-            if (!uSnap.exists()) throw new Error("NO_USER");
-  
+            if(!uSnap.exists()) throw new Error("NO_USER");
+
             const u = uSnap.data();
             const oldKey = u.nameKey;
-  
-            // Only enforce uniqueness + move registry if key changes
-            if (oldKey !== key) {
+
+            // if key changes, enforce uniqueness + move registry
+            if(oldKey !== key){
               const taken = await tx.get(newNameRef);
-              if (taken.exists()) throw new Error("NAME_TAKEN");
-  
-              tx.set(newNameRef, {
-                uid: renUid,
-                displayName: display,
-                createdAt: serverTimestamp()
-              });
-  
-              if (oldKey) tx.delete(doc(db, "usernames", oldKey));
+              if(taken.exists()) throw new Error("NAME_TAKEN");
+
+              tx.set(newNameRef, { uid: renUid, displayName: display, createdAt: serverTimestamp() });
+              if(oldKey) tx.delete(doc(db, "usernames", oldKey));
             }
-  
-            // Always update user doc
+
             tx.set(uref, { displayName: display, nameKey: key }, { merge: true });
           });
-  
+
           showToast("Username changed");
           renderAdminUsers();
-  
-        } catch (err) {
+        }catch(err){
           console.error(err);
-          if (String(err?.message || "").includes("NAME_TAKEN")) alert("That name is already taken.");
-          else alert("Rename failed.");
+          if(String(err?.message||"").includes("NAME_TAKEN")) showToast("Name taken");
+          else showToast("Rename failed");
         }
         return;
       }
     });
-  
+
     // Auto-refresh when panel becomes visible
     const adminObserver = new MutationObserver(() => {
-      if (adminPanel.style.display !== "none" && myProfile?.isAdmin) renderAdminUsers();
+      if(adminPanel.style.display !== "none" && myProfile?.isAdmin) renderAdminUsers();
     });
-    adminObserver.observe(adminPanel, { attributes: true, attributeFilter: ["style"] });
+    adminObserver.observe(adminPanel, { attributes:true, attributeFilter:["style"] });
   </script>
 
   <!--
-    ✅ FIRESTORE RULES (paste into Firebase Console → Firestore → Rules)
+    IMPORTANT: Your admin actions will ONLY work if your Firestore Rules allow them.
 
-    rules_version = '2';
-    service cloud.firestore {
-      match /databases/{database}/documents {
+    ✅ Use the rules I gave you earlier that:
+    - allow admins to create /usernames/{nameKey} for ANY uid (admin rename)
+    - allow admins to update /users/{uid} without requiring the uid field to exist
+    - allow admins to delete /messages/{id}
 
-        function signedIn() {
-          return request.auth != null;
-        }
-
-        function me() {
-          return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        }
-
-        function isAdmin() {
-          return signedIn() && me().isAdmin == true;
-        }
-
-        // Username registry: unique reservation
-        match /usernames/{nameKey} {
-          allow read: if signedIn();
-
-          // Reserve a name if it doesn't exist
-          allow create: if signedIn()
-            && !exists(/databases/$(database)/documents/usernames/$(nameKey))
-            && request.resource.data.keys().hasOnly(['uid','displayName','createdAt'])
-            && request.resource.data.uid == request.auth.uid
-            && request.resource.data.displayName is string
-            && request.resource.data.displayName.size() >= 2
-            && request.resource.data.displayName.size() <= 24;
-
-          // Only admin can release names (needed for admin rename)
-          allow delete: if isAdmin();
-          allow update: if false;
-        }
-
-        match /users/{uid} {
-          allow read: if signedIn();
-
-          // Create profile (must include nameKey + displayName). Starts unverified.
-          allow create: if signedIn()
-            && request.auth.uid == uid
-            && request.resource.data.keys().hasOnly(['uid','displayName','nameKey','verified','banned','loggedOut','isAdmin','createdAt'])
-            && request.resource.data.uid == uid
-            && request.resource.data.displayName is string
-            && request.resource.data.displayName.size() >= 2
-            && request.resource.data.displayName.size() <= 24
-            && request.resource.data.nameKey is string
-            && request.resource.data.nameKey.size() >= 2
-            && request.resource.data.nameKey.size() <= 24
-            && request.resource.data.verified == false
-            && request.resource.data.banned == false
-            && request.resource.data.loggedOut == false
-            && request.resource.data.isAdmin == false;
-
-          // Updates:
-          // - Admin can set: verified/banned/loggedOut/displayName/nameKey/isAdmin
-          // - Users can only rename themselves if they reserved that username doc
-          allow update: if (
-              isAdmin()
-              && request.resource.data.keys().hasOnly(['uid','displayName','nameKey','verified','banned','loggedOut','isAdmin','createdAt'])
-            )
-            || (
-              signedIn()
-              && request.auth.uid == uid
-              && request.resource.data.diff(resource.data).changedKeys().hasOnly(['displayName','nameKey'])
-              && exists(/databases/$(database)/documents/usernames/$(request.resource.data.nameKey))
-              && get(/databases/$(database)/documents/usernames/$(request.resource.data.nameKey)).data.uid == request.auth.uid
-              && request.resource.data.displayName is string
-              && request.resource.data.displayName.size() >= 2
-              && request.resource.data.displayName.size() <= 24
-            );
-
-          allow delete: if false;
-        }
-
-        match /messages/{id} {
-          allow read: if signedIn();
-
-          allow create: if signedIn()
-            && me().banned == false
-            && me().loggedOut == false
-            && me().displayName is string
-            && me().displayName.size() >= 2
-            && request.resource.data.keys().hasOnly(['uid','text','createdAt'])
-            && request.resource.data.uid == request.auth.uid
-            && request.resource.data.text is string
-            && request.resource.data.text.size() > 0
-            && request.resource.data.text.size() <= 2000;
-
-          allow delete: if isAdmin();
-          allow update: if false;
-        }
-      }
-    }
-
-    IMPORTANT:
-    - Make someone admin by manually setting users/{uid}.isAdmin=true in Firestore Console.
-    - New users start verified=false.
-    - Users cannot set verified/banned/loggedOut themselves.
+    Also set users/{yourUid}.isAdmin = true manually in Firestore.
   -->
 </body>
 </html>
