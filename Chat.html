@@ -443,33 +443,66 @@
     background:linear-gradient(180deg, rgba(228,248,255,.08), rgba(217,243,255,.05));
     border:1px solid rgba(214,245,255,.10);
     border-radius:18px;
-    padding:12px;
+    padding:14px;
     display:flex;
-    justify-content:space-between;
+    flex-direction:column;
     gap:12px;
     content-visibility:auto;
-    contain-intrinsic-size:130px;
+    contain-intrinsic-size:220px;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
   }
 
-  .userCard .uName{ font-weight:900; color:#d9f6ff; }
-  .userCard .uMeta{ font-size:12px; color:var(--muted); }
+  .userTop{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .userCard .uName{ font-weight:900; color:#d9f6ff; font-size:20px; line-height:1.15; word-break:break-word; }
+  .userCard .uMeta{ font-size:12px; color:var(--muted); word-break:break-all; }
+  .statusRow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:2px; }
+  .statusPill{
+    font-size:11px;
+    font-weight:900;
+    padding:6px 9px;
+    border-radius:999px;
+    border:1px solid rgba(214,245,255,.12);
+    background:rgba(230,248,255,.07);
+    color:var(--text);
+  }
+  .statusPill.verify{ border-color:rgba(66,211,146,.28); background:rgba(66,211,146,.12); color:#dffbf0; }
+  .statusPill.unverify{ border-color:rgba(255,107,99,.24); background:rgba(255,107,99,.10); color:#ffe1de; }
+  .statusPill.admin{ border-color:rgba(97,182,255,.26); background:rgba(103,183,255,.16); }
+  .statusPill.warn{ border-color:rgba(255,209,102,.24); background:rgba(255,209,102,.12); color:#fff5d0; }
+  .statusPill.danger{ border-color:rgba(255,107,99,.24); background:rgba(255,107,99,.12); }
 
-  .inlineEdit{ display:flex; gap:10px; margin-top:10px; align-items:stretch; flex-wrap:wrap; }
-  .inlineEdit input{ flex:1 1 240px; min-width:180px; width:100%; padding:12px 14px; min-width:0; }
+  .inlineEdit{ display:flex; gap:10px; margin-top:2px; align-items:stretch; flex-wrap:wrap; }
+  .inlineEdit input{
+    flex:1 1 320px;
+    min-width:260px;
+    width:100%;
+    padding:13px 15px;
+    background:linear-gradient(180deg, rgba(14,56,90,.74), rgba(10,42,69,.72));
+    color:#f4fcff;
+    font-size:14px;
+  }
 
   .uActions{
     display:grid;
-    grid-template-columns:repeat(2, minmax(124px, 1fr));
-    gap:8px;
-    align-content:flex-start;
-    min-width:272px;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+    width:100%;
+    min-width:0;
   }
-  .uActions .btn{ width:100%; white-space:nowrap; }
+  .uActions .btn{
+    width:100%;
+    white-space:normal;
+    min-height:46px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    line-height:1.15;
+  }
 
   @media (max-width:560px){
-    .userCard{ flex-direction:column; }
-    .uActions{ grid-template-columns:1fr; min-width:0; }
+    .uActions{ grid-template-columns:1fr; }
+    .inlineEdit input{ min-width:0; }
   }
 
   .toast{
@@ -612,7 +645,8 @@
       deleteDoc,
       runTransaction,
       writeBatch,
-      getDocs
+      getDocs,
+      where
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     // ---- Firebase config (yours)
@@ -679,53 +713,147 @@
     }
     const deviceId = getDeviceId();
 
-    // ---- Local device account cache (auto-login)
-    // Stores the last known profile tied to (deviceId, uid).
     const ACCOUNT_KEY = "mgc_account";
+    const ACCOUNT_COOKIE = "mgc_account_cookie";
+    const COOKIE_ID_KEY = "mgc_cookie_id";
 
-    function loadSavedAccount() {
+    function getCookie(name) {
+      const row = document.cookie
+        .split("; ")
+        .find(v => v.startsWith(name + "="));
+      return row ? decodeURIComponent(row.split("=").slice(1).join("=")) : "";
+    }
+
+    function setCookie(name, value, days = 365) {
+      const expires = new Date(Date.now() + days * 86400000).toUTCString();
+      document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+    }
+
+    function clearCookie(name) {
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+    }
+
+    function getCookieId() {
+      let v = getCookie(COOKIE_ID_KEY) || localStorage.getItem(COOKIE_ID_KEY);
+      if (!v) {
+        v = (crypto?.randomUUID
+          ? crypto.randomUUID()
+          : ("ck_" + Math.random().toString(36).slice(2) + Date.now()));
+      }
+      localStorage.setItem(COOKIE_ID_KEY, v);
+      setCookie(COOKIE_ID_KEY, v, 365);
+      return v;
+    }
+    const cookieId = getCookieId();
+
+    let currentPublicIp = null;
+    async function fetchPublicIp() {
+      const endpoints = [
+        "https://api64.ipify.org?format=json",
+        "https://api.ipify.org?format=json"
+      ];
+      for (const url of endpoints) {
+        try {
+          const ctl = new AbortController();
+          const timer = setTimeout(() => ctl.abort(), 1800);
+          const res = await fetch(url, { signal: ctl.signal, cache: "no-store" });
+          clearTimeout(timer);
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data?.ip && typeof data.ip === "string") return data.ip;
+        } catch (_) {}
+      }
+      return null;
+    }
+    fetchPublicIp().then((ip) => {
+      if (ip) currentPublicIp = ip;
+    }).catch(() => {});
+
+    function safeParse(raw) {
       try {
-        const raw = localStorage.getItem(ACCOUNT_KEY);
-        if (!raw) return null;
         const obj = JSON.parse(raw);
-        if (!obj || typeof obj !== "object") return null;
-        return {
-          uid: typeof obj.uid === "string" ? obj.uid : null,
-          deviceId: typeof obj.deviceId === "string" ? obj.deviceId : null,
-          displayName: typeof obj.displayName === "string" ? obj.displayName : null,
-          nameKey: typeof obj.nameKey === "string" ? obj.nameKey : null
-        };
+        return obj && typeof obj === "object" ? obj : null;
       } catch {
         return null;
       }
     }
 
-    function saveAccountToDevice(profile) {
+    function normalizeSavedAccount(obj) {
+      if (!obj || typeof obj !== "object") return null;
+      return {
+        uid: typeof obj.uid === "string" ? obj.uid : null,
+        deviceId: typeof obj.deviceId === "string" ? obj.deviceId : null,
+        displayName: typeof obj.displayName === "string" ? obj.displayName : null,
+        nameKey: typeof obj.nameKey === "string" ? obj.nameKey : null,
+        cookieId: typeof obj.cookieId === "string" ? obj.cookieId : null,
+        ip: typeof obj.ip === "string" ? obj.ip : null,
+        savedAt: typeof obj.savedAt === "number" ? obj.savedAt : 0
+      };
+    }
+
+    function loadSavedAccounts() {
+      const items = [];
+      const localObj = normalizeSavedAccount(safeParse(localStorage.getItem(ACCOUNT_KEY)));
+      const cookieObj = normalizeSavedAccount(safeParse(getCookie(ACCOUNT_COOKIE)));
+      if (localObj) items.push(localObj);
+      if (cookieObj) items.push(cookieObj);
+
+      const deduped = [];
+      const seen = new Set();
+      for (const item of items) {
+        const sig = [item.uid || "", item.deviceId || "", item.nameKey || "", item.cookieId || "", item.ip || ""].join("|");
+        if (seen.has(sig)) continue;
+        seen.add(sig);
+        deduped.push(item);
+      }
+      return deduped.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+    }
+
+    function saveAccountHints(profile) {
       if (!me?.uid || !profile) return;
       const displayName = typeof profile.displayName === "string" ? profile.displayName : "";
       const nameKey = typeof profile.nameKey === "string" ? profile.nameKey : "";
+      const payload = {
+        uid: me.uid,
+        deviceId,
+        displayName,
+        nameKey,
+        cookieId,
+        ip: currentPublicIp || null,
+        savedAt: Date.now()
+      };
       try {
-        localStorage.setItem(ACCOUNT_KEY, JSON.stringify({
-          uid: me.uid,
-          deviceId,
-          displayName,
-          nameKey,
-          savedAt: Date.now()
-        }));
+        localStorage.setItem(ACCOUNT_KEY, JSON.stringify(payload));
       } catch (e) {
         console.warn("Could not save account to device", e);
       }
+      try {
+        setCookie(ACCOUNT_COOKIE, JSON.stringify(payload), 365);
+      } catch (e) {
+        console.warn("Could not save account cookie", e);
+      }
+    }
+
+    function clearSavedAccountHints() {
+      try { localStorage.removeItem(ACCOUNT_KEY); } catch (_) {}
+      clearCookie(ACCOUNT_COOKIE);
     }
 
     async function tryAutoRestoreProfile(currentUid) {
-      const saved = loadSavedAccount();
+      const savedCandidates = loadSavedAccounts();
+      if (!savedCandidates.length) return false;
+
+      const saved = savedCandidates.find((candidate) => {
+        if (!candidate || !candidate.displayName || !candidate.nameKey) return false;
+        return !!(
+          (candidate.uid && candidate.uid === currentUid) ||
+          (candidate.deviceId && candidate.deviceId === deviceId) ||
+          (candidate.cookieId && candidate.cookieId === cookieId) ||
+          (candidate.ip && currentPublicIp && candidate.ip === currentPublicIp)
+        );
+      });
+
       if (!saved) return false;
-
-      // Auto-login if EITHER uid matches OR deviceId matches.
-      const matches = (saved.uid && saved.uid === currentUid) || (saved.deviceId && saved.deviceId === deviceId);
-      if (!matches) return false;
-
-      if (!saved.displayName || !saved.nameKey) return false;
 
       const uref = doc(db, "users", currentUid);
       const nref = doc(db, "usernames", saved.nameKey);
@@ -748,7 +876,6 @@
             });
           }
 
-          // Create a minimal profile consistent with rules.
           tx.set(uref, {
             uid: currentUid,
             displayName: saved.displayName,
@@ -870,13 +997,6 @@
       const nameKey = userData.nameKey || null;
       const targetDeviceId = userData.deviceId || null;
 
-      const msgSnap = await getDocs(query(collection(db, "messages"), orderBy("createdAt"), limit(200)));
-      const relatedMessages = [];
-      msgSnap.forEach((d) => {
-        const msg = d.data();
-        if (msg.uid === uid) relatedMessages.push(d.id);
-      });
-
       let batch = writeBatch(db);
       let ops = 0;
       const commitBatch = async () => {
@@ -897,10 +1017,16 @@
         ops++;
       }
 
-      for (const mid of relatedMessages) {
-        batch.delete(doc(db, "messages", mid));
-        ops++;
-        if (ops >= 450) await commitBatch();
+      while (true) {
+        const msgSnap = await getDocs(query(collection(db, "messages"), where("uid", "==", uid), limit(350)));
+        if (msgSnap.empty) break;
+
+        msgSnap.forEach((msgDoc) => {
+          batch.delete(msgDoc.ref);
+          ops++;
+        });
+
+        await commitBatch();
       }
 
       batch.delete(uref);
@@ -1071,25 +1197,28 @@
       for (const u of filtered) {
         const uid = u.uid || u.id;
         const isMe = (uid === me.uid);
+        const forceLogoutUsed = u.loggedOut === true;
 
-        const flags = [
-          u.isAdmin ? "Admin" : null,
-          u.verified ? "Verified" : "Unverified",
-          u.banned ? "Banned" : null,
-          u.loggedOut ? "LoggedOut" : null
-        ].filter(Boolean).join(" • ");
+        const badges = [
+          u.isAdmin ? '<span class="statusPill admin">Admin</span>' : '',
+          u.verified ? '<span class="statusPill verify">Verified</span>' : '<span class="statusPill unverify">Unverified</span>',
+          u.banned ? '<span class="statusPill danger">Banned</span>' : '',
+          forceLogoutUsed ? '<span class="statusPill warn">Force logout used</span>' : ''
+        ].filter(Boolean).join('');
 
         const card = document.createElement("div");
         card.className = "userCard";
 
         card.innerHTML = `
-          <div style="min-width:0; flex:1;">
+          <div class="userTop">
             <div class="uName">${escapeHTML(u.displayName || "(no name)")}</div>
-            <div class="uMeta">${escapeHTML(String(uid).slice(0, 10))} • ${escapeHTML(flags)}</div>
-            <div class="inlineEdit">
-              <input data-rename="${uid}" placeholder="New name" maxlength="24" />
-              <button class="btn ok small" data-renbtn="${uid}">Rename</button>
-            </div>
+            <div class="uMeta">UID: ${escapeHTML(String(uid))}</div>
+            <div class="statusRow">${badges}</div>
+          </div>
+
+          <div class="inlineEdit">
+            <input data-rename="${uid}" value="${escapeHTML(u.displayName || "")}" placeholder="Enter a new username" maxlength="24" autocomplete="off" spellcheck="false" />
+            <button class="btn ok small" data-renbtn="${uid}">Rename</button>
           </div>
 
           <div class="uActions">
@@ -1097,12 +1226,12 @@
               ${u.verified ? "Unverify" : "Verify"}
             </button>
 
-            <button class="btn ghost small" data-clearlogout="${uid}" ${u.loggedOut ? "" : "disabled"}>
+            <button class="btn ghost small" data-clearlogout="${uid}" ${forceLogoutUsed ? "" : "disabled"}>
               Clear logout
             </button>
 
-            <button class="btn ghost small" data-logout="${uid}" ${isMe ? "disabled" : ""}>
-              Force logout
+            <button class="btn ghost small" data-logout="${uid}" ${(isMe || forceLogoutUsed) ? "disabled" : ""}>
+              ${forceLogoutUsed ? "Forced logout used" : "Force logout"}
             </button>
 
             <button class="btn ghost small"
@@ -1182,7 +1311,7 @@
           if (post.exists()) {
             myProfile = post.data();
             mePill.textContent = "You: " + (myProfile.displayName || "?");
-            saveAccountToDevice(myProfile);
+            saveAccountHints(myProfile);
             closeNameModal();
           } else {
             mePill.textContent = "Choose a name";
@@ -1195,7 +1324,7 @@
       } else {
         myProfile = snap.data();
         mePill.textContent = "You: " + (myProfile.displayName || "?");
-        saveAccountToDevice(myProfile);
+        saveAccountHints(myProfile);
         closeNameModal();
       }
 
@@ -1204,7 +1333,7 @@
         myProfile = s.data();
 
         // Keep local device cache fresh (uid + deviceId + name).
-        saveAccountToDevice(myProfile);
+        saveAccountHints(myProfile);
 
         mePill.textContent = "You: " + (myProfile.displayName || "?");
 
@@ -1329,8 +1458,8 @@
           }, { merge: true });
         });
 
-        // Persist account mapping on device (uid + deviceId)
-        saveAccountToDevice({ displayName: display, nameKey: key });
+        // Persist account hints locally (cookie + uid + deviceId + best-effort IP)
+        saveAccountHints({ displayName: display, nameKey: key });
 
         closeNameModal();
         showToast("Created. Waiting for verify.");
@@ -1390,6 +1519,16 @@
     messageInput.addEventListener("focus", pulseTypingState);
     messageInput.addEventListener("blur", () => {
       if (!messageInput.value.trim()) setTypingState(false);
+    });
+    usersList.addEventListener("keydown", async (e) => {
+      const target = e.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      if (e.key !== "Enter") return;
+      const uid = target.getAttribute("data-rename");
+      if (!uid) return;
+      e.preventDefault();
+      const btn = usersList.querySelector(`[data-renbtn="${uid}"]`);
+      btn?.click();
     });
 
     document.addEventListener("click", async (e) => {
@@ -1514,15 +1653,16 @@
 
       const renUid = t.getAttribute("data-renbtn");
       if (renUid) {
-        const input = document.querySelector(`input[data-rename="${CSS.escape(renUid)}"]`);
+        const input = usersList.querySelector(`[data-rename="${renUid}"]`);
         const { display, key } = normalizeName(input?.value || "");
-        if (!display) { showToast("Enter a name"); return; }
-        if (display.length < 2 || display.length > 24) { showToast("Name must be 2–24"); return; }
+        if (!display) { showToast("Enter a name"); input?.focus(); return; }
+        if (display.length < 2 || display.length > 24) { showToast("Name must be 2–24"); input?.focus(); return; }
 
         const uref = doc(db, "users", renUid);
         const newNameRef = doc(db, "usernames", key);
 
         try {
+          t.disabled = true;
           await runTransaction(db, async (tx) => {
             const uSnap = await tx.get(uref);
             if (!uSnap.exists()) throw new Error("NO_USER");
@@ -1531,20 +1671,23 @@
 
             if (oldKey !== key) {
               const taken = await tx.get(newNameRef);
-              if (taken.exists()) throw new Error("NAME_TAKEN");
+              if (taken.exists() && taken.data()?.uid !== renUid) throw new Error("NAME_TAKEN");
 
-              tx.set(newNameRef, { uid: renUid, displayName: display, createdAt: serverTimestamp() });
-              if (oldKey) tx.delete(doc(db, "usernames", oldKey));
+              tx.set(newNameRef, { uid: renUid, displayName: display, createdAt: serverTimestamp() }, { merge: true });
+              if (oldKey && oldKey !== key) tx.delete(doc(db, "usernames", oldKey));
             }
 
             tx.set(uref, { displayName: display, nameKey: key }, { merge: true });
           });
 
+          if (input) input.value = display;
           showToast("Username changed");
         } catch (err) {
           console.error(err);
           if (String(err?.message || "").includes("NAME_TAKEN")) showToast("Name taken");
           else showToast("Rename failed");
+        } finally {
+          t.disabled = false;
         }
         return;
       }
