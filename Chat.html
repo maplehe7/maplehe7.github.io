@@ -58,8 +58,8 @@
     .adminBody{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:12px}
     .sec{font-size:11px;text-transform:uppercase;letter-spacing:.22px;color:var(--muted);margin-bottom:6px;font-weight:700}
     .searchRow{display:grid;grid-template-columns:1fr auto;gap:8px}
-    .searchRow input,.inlineEdit input,.authField{width:100%;border-radius:11px;border:1px solid rgba(185,231,255,.22);background:rgba(8,24,37,.8);color:var(--text);font-size:13px;outline:none;padding:9px 10px}
-    .searchRow input:focus,.inlineEdit input:focus,.authField:focus{border-color:rgba(111,189,255,.65);box-shadow:0 0 0 3px rgba(57,151,255,.17)}
+    .searchRow input,.authField{width:100%;border-radius:11px;border:1px solid rgba(185,231,255,.22);background:rgba(8,24,37,.8);color:var(--text);font-size:13px;outline:none;padding:9px 10px}
+    .searchRow input:focus,.authField:focus{border-color:rgba(111,189,255,.65);box-shadow:0 0 0 3px rgba(57,151,255,.17)}
     #usersList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px}
     .userCard{border:1px solid rgba(183,231,255,.2);border-radius:14px;background:linear-gradient(180deg,rgba(12,36,54,.82),rgba(8,26,40,.88));padding:10px;display:flex;flex-direction:column;gap:8px}
     .userName{font-size:14px;font-weight:700;color:#d7f2ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -71,7 +71,6 @@
     .sp.a{border-color:rgba(92,170,255,.55);background:rgba(92,170,255,.2)}
     .sp.d{border-color:rgba(255,122,111,.5);background:rgba(255,122,111,.2)}
     .sp.w{border-color:rgba(255,206,106,.45);background:rgba(255,206,106,.18)}
-    .inlineEdit{display:grid;grid-template-columns:1fr auto;gap:6px}
     .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:80;padding:16px;background:rgba(4,13,20,.7);backdrop-filter:blur(6px)}
     .modal.show{display:flex}
     .authCard{width:min(430px,100%);border-radius:18px;border:1px solid rgba(188,233,255,.27);background:linear-gradient(180deg,rgba(12,35,52,.98),rgba(8,25,38,.98));box-shadow:var(--shadow);overflow:hidden}
@@ -285,6 +284,7 @@
     let lastMessageRenderKey = "";
     let lastMessagesSnapshot = null;
     let liveUsers = [];
+    let didWarnAdminType = false;
     const userCache = new Map();
 
     function getDeviceId() {
@@ -308,6 +308,12 @@
       toastTimer = setTimeout(() => { toast.className = "toast"; }, 2400);
     }
 
+    function failToast(label, err) {
+      const code = err?.code ? String(err.code) : "unknown";
+      console.error(label, err);
+      showToast(`${label} (${code})`, "danger");
+    }
+
     function escapeHtml(input) {
       return String(input ?? "").replace(/[&<>"']/g, (ch) => ({
         "&": "&amp;",
@@ -329,6 +335,7 @@
     const validatePassword = (password) => typeof password === "string" && password.length >= 8 && password.length <= 72;
     const validateDisplayName = (displayName) => displayName.length >= 2 && displayName.length <= 32;
     const makeLoginEmail = (username) => `${username}@${AUTH_DOMAIN}`;
+    const isAdminUser = () => myProfile?.isAdmin === true;
 
     function setAuthError(text) {
       authErr.textContent = text || "";
@@ -445,7 +452,7 @@
     }
 
     function applyRoleUi() {
-      if (!myProfile?.isAdmin) {
+      if (!isAdminUser()) {
         adminPill.style.display = "none";
         layout.classList.add("centered");
         adminCol.style.display = "none";
@@ -520,7 +527,7 @@
           ? '<span class="badge v">Verified</span>'
           : '<span class="badge u">Unverified</span>';
 
-        const adminTools = myProfile?.isAdmin
+        const adminTools = isAdminUser()
           ? `<div style="margin-top:10px;display:flex;justify-content:flex-end;"><button class="btn danger small" data-delmsg="${docSnap.id}">Delete</button></div>`
           : "";
 
@@ -543,7 +550,7 @@
     }
 
     function queueAdminUsersRender() {
-      if (!myProfile?.isAdmin || usersRenderQueued) return;
+      if (!isAdminUser() || usersRenderQueued) return;
       usersRenderQueued = true;
       requestAnimationFrame(() => {
         usersRenderQueued = false;
@@ -552,7 +559,7 @@
     }
 
     function renderAdminUsers() {
-      if (!myProfile?.isAdmin) return;
+      if (!isAdminUser()) return;
       const queryText = (adminSearch.value || "").trim().toLowerCase();
       const users = [...liveUsers];
 
@@ -590,10 +597,6 @@
             <div class="userMeta">@${escapeHtml(row.usernameKey || "no-username")}<br />UID: ${escapeHtml(uid)}</div>
             <div class="statusRow">${badges}</div>
           </div>
-          <div class="inlineEdit">
-            <input data-rename-display="${escapeHtml(uid)}" value="${escapeHtml(row.displayName || "")}" maxlength="32" placeholder="Display name" autocomplete="off" />
-            <button class="btn ok small" data-save-display="${escapeHtml(uid)}">Save</button>
-          </div>
           <div class="uActions">
             <button class="btn ghost small" data-verify="${escapeHtml(uid)}" data-verifyval="${row.verified ? "0" : "1"}">${row.verified ? "Unverify" : "Verify"}</button>
             <button class="btn ghost small" data-logout="${escapeHtml(uid)}" ${isMe || row.loggedOut ? "disabled" : ""}>Force logout</button>
@@ -610,7 +613,7 @@
       usersList.appendChild(frag);
     }
 
-    const canDeleteUser = (uid) => !!(myProfile?.isAdmin && uid && uid !== me?.uid);
+    const canDeleteUser = (uid) => !!(isAdminUser() && uid && uid !== me?.uid);
 
     async function deleteUserEverywhere(uid) {
       if (!canDeleteUser(uid)) throw new Error("CANNOT_DELETE_USER");
@@ -620,7 +623,7 @@
       if (!userSnap.exists()) throw new Error("NO_USER");
 
       const userData = userSnap.data() || {};
-      const usernameKey = userData.usernameKey || null;
+      const usernameKey = userData.usernameKey || userData.nameKey || null;
       const targetDeviceId = userData.deviceId || null;
 
       let batch = writeBatch(db);
@@ -794,8 +797,7 @@
         updateCharCount();
         scrollToBottom();
       } catch (err) {
-        console.error(err);
-        showToast("Message failed. Check Firestore rules.", "danger");
+        failToast("Message failed", err);
       } finally {
         if (!messageInput.disabled) {
           sendBtn.disabled = false;
@@ -810,12 +812,12 @@
 
     signOutTop.addEventListener("click", async () => {
       try { await signOut(auth); }
-      catch (err) { console.error(err); showToast("Sign out failed", "danger"); }
+      catch (err) { failToast("Sign out failed", err); }
     });
 
     blockedSignOut.addEventListener("click", async () => {
       try { await signOut(auth); }
-      catch (err) { console.error(err); showToast("Sign out failed", "danger"); }
+      catch (err) { failToast("Sign out failed", err); }
     });
 
     sendBtn.addEventListener("click", sendMessage);
@@ -835,49 +837,38 @@
       queueAdminUsersRender();
     });
 
-    usersList.addEventListener("keydown", (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLInputElement)) return;
-      if (event.key !== "Enter") return;
-      const uid = target.getAttribute("data-rename-display");
-      if (!uid) return;
-      event.preventDefault();
-      const saveButton = usersList.querySelector(`[data-save-display="${uid}"]`);
-      saveButton?.click();
-    });
-
     document.addEventListener("click", async (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
 
       const messageId = target.getAttribute("data-delmsg");
-      if (messageId && myProfile?.isAdmin) {
+      if (messageId && isAdminUser()) {
         try { await deleteDoc(doc(db, "messages", messageId)); showToast("Message deleted", "ok"); }
-        catch (err) { console.error(err); showToast("Delete failed", "danger"); }
+        catch (err) { failToast("Delete failed", err); }
         return;
       }
 
-      if (!myProfile?.isAdmin) return;
+      if (!isAdminUser()) return;
 
       const verifyUid = target.getAttribute("data-verify");
       if (verifyUid) {
         const value = target.getAttribute("data-verifyval") === "1";
         try { await updateDoc(doc(db, "users", verifyUid), { verified: value, updatedAt: serverTimestamp() }); showToast(value ? "User verified" : "User unverified", "ok"); }
-        catch (err) { console.error(err); showToast("Verify failed", "danger"); }
+        catch (err) { failToast("Verify failed", err); }
         return;
       }
 
       const logoutUid = target.getAttribute("data-logout");
       if (logoutUid) {
         try { await updateDoc(doc(db, "users", logoutUid), { loggedOut: true, updatedAt: serverTimestamp() }); showToast("Force logout applied", "ok"); }
-        catch (err) { console.error(err); showToast("Force logout failed", "danger"); }
+        catch (err) { failToast("Force logout failed", err); }
         return;
       }
 
       const clearLogoutUid = target.getAttribute("data-clearlogout");
       if (clearLogoutUid) {
         try { await updateDoc(doc(db, "users", clearLogoutUid), { loggedOut: false, updatedAt: serverTimestamp() }); showToast("Logout flag cleared", "ok"); }
-        catch (err) { console.error(err); showToast("Clear logout failed", "danger"); }
+        catch (err) { failToast("Clear logout failed", err); }
         return;
       }
 
@@ -885,7 +876,7 @@
       if (adminUid) {
         const makeAdmin = target.getAttribute("data-setadminval") === "1";
         try { await updateDoc(doc(db, "users", adminUid), { isAdmin: makeAdmin, updatedAt: serverTimestamp() }); showToast(makeAdmin ? "Admin granted" : "Admin removed", "ok"); }
-        catch (err) { console.error(err); showToast("Admin update failed", "danger"); }
+        catch (err) { failToast("Admin update failed", err); }
         return;
       }
 
@@ -914,8 +905,7 @@
 
           showToast(willBan ? "User banned" : "User unbanned", "ok");
         } catch (err) {
-          console.error(err);
-          showToast("Ban operation failed", "danger");
+          failToast("Ban operation failed", err);
         }
         return;
       }
@@ -930,29 +920,11 @@
         if (!ok) return;
 
         try { target.disabled = true; await deleteUserEverywhere(deleteUid); showToast("User deleted", "ok"); }
-        catch (err) { console.error(err); showToast("Delete user failed", "danger"); }
+        catch (err) { failToast("Delete user failed", err); }
         finally { target.disabled = false; }
         return;
       }
 
-      const renameUid = target.getAttribute("data-save-display");
-      if (renameUid) {
-        const input = usersList.querySelector(`[data-rename-display="${renameUid}"]`);
-        const displayName = normalizeDisplayName(input?.value || "");
-        if (!validateDisplayName(displayName)) { showToast("Display name must be 2-32 characters", "danger"); input?.focus(); return; }
-
-        try {
-          target.disabled = true;
-          await updateDoc(doc(db, "users", renameUid), { displayName, updatedAt: serverTimestamp() });
-          if (input) input.value = displayName;
-          showToast("Display name updated", "ok");
-        } catch (err) {
-          console.error(err);
-          showToast("Rename failed", "danger");
-        } finally {
-          target.disabled = false;
-        }
-      }
     });
 
     onAuthStateChanged(auth, async (user) => {
@@ -960,6 +932,7 @@
       clearSubscriptions();
       me = user || null;
       myProfile = null;
+      didWarnAdminType = false;
 
       if (!user) {
         setStatus("Signed out");
@@ -1002,6 +975,10 @@
       }
 
       myProfile = profileSnap.data();
+      if (!didWarnAdminType && myProfile?.isAdmin && myProfile.isAdmin !== true) {
+        didWarnAdminType = true;
+        showToast("Fix users.isAdmin type to boolean true", "danger");
+      }
       updateHeaderIdentity();
       applyRoleUi();
       const initialBlock = profileBlockReason(myProfile);
@@ -1021,6 +998,10 @@
         }
 
         myProfile = snap.data();
+        if (!didWarnAdminType && myProfile?.isAdmin && myProfile.isAdmin !== true) {
+          didWarnAdminType = true;
+          showToast("Fix users.isAdmin type to boolean true", "danger");
+        }
         updateHeaderIdentity();
         applyRoleUi();
 
