@@ -3,668 +3,222 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ocean chat thingy</title>
-<style>
-  :root{
-    --bg:transparent;
-    --card:linear-gradient(180deg, rgba(38,102,145,.42), rgba(24,78,118,.34));
-    --card-solid:rgba(28,86,128,.42);
-    --card-strong:rgba(18,63,98,.52);
-    --stroke:rgba(190,237,255,.17);
-    --stroke-strong:rgba(171,229,255,.28);
-    --text:#eefbff;
-    --muted:rgba(227,246,255,.72);
-    --brand:#67b7ff;
-    --brand-2:#4f8cff;
-    --danger:#ff6b63;
-    --ok:#42d392;
-    --warn:#ffd166;
-    --shadow:0 24px 60px rgba(9,32,48,.22),0 8px 22px rgba(8,35,52,.14);
-    --r:22px;
-    --glass-blur:18px;
-  }
-
-  *{box-sizing:border-box;}
-
-  html,body{
-    height:100%;
-    background:transparent;
-  }
-
-  body{
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    color:var(--text);
-    background:transparent;
-    display:flex;
-    justify-content:center;
-    padding:14px;
-    text-rendering:optimizeLegibility;
-    -webkit-font-smoothing:antialiased;
-  }
-
-  .wrap{
-    width:100%;
-    max-width:1100px;
-    display:flex;
-    gap:16px;
-    align-items:flex-start;
-  }
-
-  .mainCol{ flex:1; min-width:0; }
-  .sideCol{ width:360px; flex:0 0 360px; min-width:320px; }
-
-  @media (max-width:980px){
-    .wrap{ flex-direction:column; }
-    .sideCol{ width:100%; flex:1 1 auto; min-width:0; }
-  }
-
-  .wrap.centered{ justify-content:center; }
-  .wrap.centered .sideCol{ display:none; }
-  .wrap.centered .mainCol{ max-width:900px; }
-
-  .card{
-    position:relative;
-    background:var(--card);
-    border:1px solid var(--stroke);
-    border-radius:var(--r);
-    box-shadow:var(--shadow);
-    backdrop-filter:blur(var(--glass-blur)) saturate(135%);
-    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(135%);
-    overflow:hidden;
-    isolation:isolate;
-  }
-
-  .card::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    border-radius:inherit;
-    padding:1px;
-    background:linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.04), rgba(111,210,255,.18));
-    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite:xor;
-    mask-composite:exclude;
-    pointer-events:none;
-    opacity:.95;
-  }
-
-  .card::after{
-    content:"";
-    position:absolute;
-    inset:auto -8% 65% -8%;
-    height:130px;
-    background:radial-gradient(circle at top, rgba(194,244,255,.14), transparent 65%);
-    pointer-events:none;
-  }
-
-  .hdr{
-    padding:14px 16px;
-    border-bottom:1px solid rgba(213,245,255,.11);
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
-  }
-
-  .hdr .title{
-    font-weight:900;
-    letter-spacing:.2px;
-    text-shadow:0 1px 0 rgba(255,255,255,.06);
-  }
-
-  .hdr .sub{
-    font-size:12px;
-    color:var(--muted);
-    margin-top:3px;
-  }
-
-  .sectionTitle{
-    font-size:12px;
-    letter-spacing:.22px;
-    text-transform:uppercase;
-    color:rgba(232,249,255,.76);
-    margin-bottom:8px;
-    font-weight:900;
-  }
-
-  .pillRow{
-    display:flex;
-    gap:8px;
-    align-items:center;
-    flex-wrap:wrap;
-    justify-content:flex-end;
-  }
-
-  .pill{
-    font-size:12px;
-    padding:7px 11px;
-    border-radius:999px;
-    border:1px solid rgba(218,246,255,.12);
-    background:rgba(230,248,255,.07);
-    color:var(--muted);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-  }
-
-  .pill.admin{
-    border-color:rgba(97,182,255,.26);
-    background:linear-gradient(180deg, rgba(103,183,255,.24), rgba(76,123,255,.14));
-    color:#fff;
-  }
-
-  .btn{
-    border:none;
-    border-radius:14px;
-    padding:10px 14px;
-    font-weight:900;
-    cursor:pointer;
-    background:linear-gradient(135deg,var(--brand),var(--brand-2));
-    color:white;
-    font-size:13px;
-    box-shadow:0 10px 24px rgba(79,140,255,.22), inset 0 1px 0 rgba(255,255,255,.12);
-    transition:transform .14s ease, box-shadow .18s ease, filter .18s ease, opacity .18s ease;
-  }
-
-  .btn:hover{ transform:translateY(-1px); box-shadow:0 14px 28px rgba(79,140,255,.28), inset 0 1px 0 rgba(255,255,255,.16); filter:brightness(1.03); }
-  .btn:active{ transform:translateY(0); }
-  .btn:disabled{ opacity:.55; cursor:not-allowed; transform:none; box-shadow:none; }
-
-  .btn.ghost{
-    background:rgba(227,248,255,.09);
-    color:var(--text);
-    border:1px solid rgba(214,245,255,.10);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
-  }
-
-  .btn.danger{ background:linear-gradient(135deg,#ff7d73,#ff665c); }
-  .btn.ok{ background:linear-gradient(135deg,#50d8a0,#2bc987); }
-  .small{ padding:8px 10px; border-radius:12px; font-size:12px; }
-
-  .body{
-    height:min(72vh,720px);
-    display:flex;
-    flex-direction:column;
-    position:relative;
-  }
-
-  #messages{
-    flex:1;
-    overflow-y:auto;
-    padding:14px 14px 10px;
-    scroll-behavior:auto;
-    overscroll-behavior:contain;
-    contain:layout style paint;
-    scrollbar-width:thin;
-    scrollbar-color:rgba(203,242,255,.44) transparent;
-  }
-
-  #messages::-webkit-scrollbar,
-  #usersList::-webkit-scrollbar{ width:10px; }
-  #messages::-webkit-scrollbar-track,
-  #usersList::-webkit-scrollbar-track{ background:transparent; }
-  #messages::-webkit-scrollbar-thumb,
-  #usersList::-webkit-scrollbar-thumb{
-    background:linear-gradient(180deg, rgba(198,241,255,.5), rgba(121,192,226,.42));
-    border-radius:999px;
-    border:2px solid transparent;
-    background-clip:padding-box;
-  }
-
-  .msg{
-    position:relative;
-    padding:12px 14px;
-    border-radius:18px;
-    border:1px solid rgba(213,245,255,.10);
-    background:linear-gradient(180deg, rgba(7,40,67,.39), rgba(4,32,56,.31));
-    margin:10px 0;
-    content-visibility:auto;
-    contain-intrinsic-size:84px;
-    box-shadow:0 8px 22px rgba(6,27,42,.12), inset 0 1px 0 rgba(255,255,255,.05);
-    backdrop-filter:blur(8px) saturate(130%);
-    -webkit-backdrop-filter:blur(8px) saturate(130%);
-    transform:translateY(10px);
-    opacity:0;
-    animation:msgIn .28s ease forwards;
-  }
-
-  .msg::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    border-radius:inherit;
-    background:linear-gradient(135deg, rgba(255,255,255,.055), transparent 34%, rgba(150,231,255,.03));
-    pointer-events:none;
-  }
-
-  @keyframes msgIn{
-    to{ transform:translateY(0); opacity:1; }
-  }
-
-  .msg:hover{
-    background:linear-gradient(180deg, rgba(9,48,79,.45), rgba(7,38,64,.36));
-    border-color:rgba(213,245,255,.14);
-  }
-
-  .meta{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    font-size:12px;
-    color:var(--muted);
-    margin-bottom:7px;
-    gap:10px;
-  }
-
-  .nameRow{ display:flex; align-items:center; gap:8px; min-width:0; }
-  .name{ font-weight:900; color:#c9f2ff; }
-
-  .tag{
-    font-size:11px;
-    font-weight:900;
-    padding:4px 8px;
-    border-radius:999px;
-    border:1px solid rgba(148,163,184,.18);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-  }
-
-  .tag.unv{ border-color:rgba(255,107,99,.26); background:rgba(255,107,99,.10); color:#ffe1de; }
-  .tag.v{ border-color:rgba(66,211,146,.28); background:rgba(66,211,146,.12); color:#dffbf0; }
-
-  .text{
-    white-space:pre-wrap;
-    word-break:break-word;
-    line-height:1.42;
-    color:#effbff;
-  }
-
-  .adminMsgRow{ margin-top:8px; display:flex; justify-content:flex-end; gap:8px; }
-
-  .composer{
-    padding:10px;
-    border-top:1px solid rgba(213,245,255,.10);
-    display:flex;
-    gap:10px;
-    background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.01));
-    align-items:flex-end;
-  }
-
-  .composerMain{ flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; }
-
-  .typingBar{
-    min-height:18px;
-    font-size:12px;
-    color:rgba(230,247,255,.72);
-    padding:0 6px 0 4px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    opacity:0;
-    transform:translateY(3px);
-    transition:opacity .18s ease, transform .18s ease;
-    pointer-events:none;
-  }
-
-  .typingBar.show{ opacity:1; transform:translateY(0); }
-
-  .typingDots{ display:inline-flex; gap:4px; align-items:center; }
-  .typingDots span{
-    width:6px; height:6px; border-radius:50%; background:rgba(206,243,255,.82);
-    animation:bounce 1.1s infinite ease-in-out;
-  }
-  .typingDots span:nth-child(2){ animation-delay:.15s; }
-  .typingDots span:nth-child(3){ animation-delay:.3s; }
-  @keyframes bounce{
-    0%,80%,100%{ transform:translateY(0); opacity:.45; }
-    40%{ transform:translateY(-3px); opacity:1; }
-  }
-
-  textarea,
-  .searchRow input,
-  .inlineEdit input,
-  .modal input{
-    color:var(--text);
-    outline:none;
-    border-radius:14px;
-    border:1px solid rgba(214,245,255,.12);
-    background:linear-gradient(180deg, rgba(6,37,61,.34), rgba(3,29,50,.28));
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
-    backdrop-filter:blur(7px);
-    -webkit-backdrop-filter:blur(7px);
-    transition:border-color .16s ease, box-shadow .16s ease, background .16s ease;
-  }
-
-  textarea{
-    flex:1;
-    resize:none;
-    min-height:48px;
-    max-height:140px;
-    padding:12px 14px;
-  }
-
-  textarea::placeholder,
-  .searchRow input::placeholder,
-  .inlineEdit input::placeholder,
-  .modal input::placeholder{ color:rgba(221,245,255,.52); }
-
-  textarea:focus,
-  .searchRow input:focus,
-  .inlineEdit input:focus,
-  .modal input:focus{
-    border-color:rgba(114,198,255,.46);
-    box-shadow:0 0 0 3px rgba(98,178,255,.10), inset 0 1px 0 rgba(255,255,255,.06);
-    background:linear-gradient(180deg, rgba(8,42,69,.42), rgba(5,34,57,.36));
-  }
-
-  .modalWrap{
-    position:fixed;
-    inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    padding:14px;
-    z-index:50;
-    background:rgba(5,20,34,.16);
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
-  }
-  .modalWrap.show{ display:flex; }
-
-  .modal,
-  .overlayCard{
-    width:100%;
-    max-width:460px;
-    background:linear-gradient(180deg, rgba(24,78,118,.78), rgba(14,56,90,.74));
-    border:1px solid rgba(214,245,255,.14);
-    border-radius:22px;
-    padding:18px;
-    box-shadow:0 24px 54px rgba(5,27,43,.25);
-    backdrop-filter:blur(20px) saturate(130%);
-    -webkit-backdrop-filter:blur(20px) saturate(130%);
-  }
-
-  .modal input{ width:100%; margin-top:10px; padding:12px 14px; }
-
-  .err{
-    display:none;
-    margin-top:10px;
-    padding:10px;
-    border-radius:12px;
-    background:rgba(255,107,99,.12);
-    border:1px solid rgba(255,107,99,.24);
-    color:#fff;
-    font-size:13px;
-  }
-
-  .overlay{
-    position:absolute;
-    inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    background:rgba(4,24,40,.38);
-    z-index:10;
-    padding:14px;
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
-  }
-  .overlay.show{ display:flex; }
-
-  .overlayCard h3{ margin:0 0 8px 0; font-size:18px; }
-  .overlayCard p{ margin:0 0 14px 0; color:rgba(229,231,235,.86); line-height:1.35; }
-
-  /* ADMIN PANEL */
-  #adminPanel{
-    height:min(72vh,720px);
-    display:flex;
-    flex-direction:column;
-    position:sticky;
-    top:14px;
-    background:linear-gradient(180deg, rgba(35,101,141,.42), rgba(18,70,108,.34));
-    /* PERFORMANCE TWEAK: reduce expensive backdrop filter on the admin sidebar */
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
-
-  @media (max-width:980px){ #adminPanel{ position:relative; top:auto; } }
-  #adminPanel .hdr{ flex-shrink:0; }
-
-  .adminBody{ display:flex; flex-direction:column; gap:12px; padding:14px; flex:1; overflow:hidden; }
-  .searchRow{ display:flex; gap:8px; }
-  .searchRow input{ flex:1; padding:11px 12px; min-width:0; }
-
-  /* PERFORMANCE: make the users list contain its content and hint at compositing */
-  #usersList{
-    flex:1;
-    overflow-y:auto;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-    padding-right:4px;
-    margin-top:10px;
-
-    contain: content;
-    will-change: scroll-position;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .userCard{
-    background:linear-gradient(180deg, rgba(228,248,255,.08), rgba(217,243,255,.05));
-    border:1px solid rgba(214,245,255,.10);
-    border-radius:18px;
-    padding:14px;
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    content-visibility:auto;
-    contain-intrinsic-size:220px;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
-
-    /* PERFORMANCE: reduce layout thrash for many cards */
-    contain: content;
-    will-change: transform;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-  }
-
-  .userTop{ display:flex; flex-direction:column; gap:6px; min-width:0; }
-  .userCard .uName{ font-weight:900; color:#d9f6ff; font-size:20px; line-height:1.15; word-break:break-word; }
-  .userCard .uMeta{ font-size:12px; color:var(--muted); word-break:break-all; }
-  .statusRow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:2px; }
-  .statusPill{
-    font-size:11px;
-    font-weight:900;
-    padding:6px 9px;
-    border-radius:999px;
-    border:1px solid rgba(214,245,255,.12);
-    background:rgba(230,248,255,.07);
-    color:var(--text);
-  }
-  .statusPill.verify{ border-color:rgba(66,211,146,.28); background:rgba(66,211,146,.12); color:#dffbf0; }
-  .statusPill.unverify{ border-color:rgba(255,107,99,.24); background:rgba(255,107,99,.10); color:#ffe1de; }
-  .statusPill.admin{ border-color:rgba(97,182,255,.26); background:rgba(103,183,255,.16); }
-  .statusPill.warn{ border-color:rgba(255,209,102,.24); background:rgba(255,209,102,.12); color:#fff5d0; }
-  .statusPill.danger{ border-color:rgba(255,107,99,.24); background:rgba(255,107,99,.12); }
-
-  .inlineEdit{ display:flex; gap:10px; margin-top:2px; align-items:stretch; flex-wrap:wrap; }
-  .inlineEdit input{
-    flex:1 1 420px;
-    min-width:350px;
-    width:100%;
-    padding:13px 15px;
-    background:linear-gradient(180deg, rgba(14,56,90,.74), rgba(10,42,69,.72));
-    color:#f4fcff;
-    font-size:16px;
-  }
-
-  .uActions{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:10px;
-    width:100%;
-    min-width:0;
-  }
-  .uActions .btn{
-    width:100%;
-    white-space:normal;
-    min-height:52px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    line-height:1.15;
-  }
-
-  @media (max-width:560px){
-    .uActions{ grid-template-columns:1fr; }
-    .inlineEdit input{ min-width:0; }
-  }
-
-  .toast{
-    position:fixed;
-    left:50%;
-    bottom:14px;
-    transform:translateX(-50%);
-    background:linear-gradient(180deg, rgba(9,43,70,.76), rgba(6,34,56,.72));
-    border-radius:999px;
-    padding:10px 14px;
-    font-size:13px;
-    display:none;
-    border:1px solid rgba(214,245,255,.12);
-    z-index:60;
-    backdrop-filter:blur(10px);
-    -webkit-backdrop-filter:blur(10px);
-    box-shadow:0 12px 26px rgba(5,27,43,.16);
-  }
-  .toast.show{ display:block; }
-
-  @media (prefers-reduced-motion:reduce){
-    *, *::before, *::after{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
-  }
-</style>
+  <title>Ocean Chat</title>
+  <style>
+    :root{--bg:#07131f;--panel:#10263a;--panel2:#0d1f31;--stroke:rgba(178,227,255,.22);--text:#e9f8ff;--muted:rgba(220,241,255,.72);--brand:#3db5ff;--brand2:#2f7cff;--ok:#33d19f;--danger:#ff6f61;--warn:#ffca5c;--r:18px;--shadow:0 18px 40px rgba(2,14,24,.45)}
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:transparent;color:var(--text);font-family:"Segoe UI","Inter",-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden}
+    body{padding:14px;display:flex;justify-content:center;align-items:stretch}
+    .layout{width:min(1200px,100%);display:flex;gap:16px;min-height:0}
+    .layout.centered .adminCol{display:none}
+    .chatCol{flex:1;min-width:0;display:flex}
+    .adminCol{width:360px;min-width:320px;display:flex}
+    .card{width:100%;min-height:0;border:1px solid var(--stroke);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;background:transparent;position:relative}
+    .card::before{display:none}
+    .hdr{position:relative;z-index:1;padding:14px 16px;border-bottom:1px solid rgba(181,229,255,.14);display:flex;align-items:center;justify-content:space-between;gap:10px;background:transparent}
+    .title{font-weight:800}
+    .sub{font-size:12px;color:var(--muted);margin-top:2px}
+    .pillRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .pill{font-size:12px;padding:7px 10px;border-radius:999px;border:1px solid rgba(194,235,255,.2);color:var(--muted);background:rgba(190,231,255,.07);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pill.admin{display:none;color:#fff;background:linear-gradient(135deg,rgba(61,181,255,.35),rgba(47,124,255,.25));border-color:rgba(102,179,255,.4)}
+    .btn{border:none;border-radius:11px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-size:13px;font-weight:700;padding:9px 12px;cursor:pointer;transition:transform .15s ease,opacity .15s ease,filter .15s ease}
+    .btn:hover{transform:translateY(-1px);filter:brightness(1.06)}
+    .btn:disabled{opacity:.55;cursor:not-allowed;transform:none;filter:none}
+    .btn.ghost{background:rgba(200,236,255,.1);border:1px solid rgba(197,236,255,.2);color:var(--text)}
+    .btn.ok{background:linear-gradient(135deg,#49d7a8,#1ec58d)}
+    .btn.danger{background:linear-gradient(135deg,#ff7a6f,#ff5e52)}
+    .btn.small{padding:7px 10px;font-size:12px;border-radius:10px}
+    .body{position:relative;z-index:1;min-height:0;flex:1;display:flex;flex-direction:column}
+    #messages{flex:1;min-height:0;overflow-y:auto;padding:14px;scrollbar-width:thin;scrollbar-color:rgba(177,228,255,.45) transparent}
+    #messages::-webkit-scrollbar,#usersList::-webkit-scrollbar{width:9px}
+    #messages::-webkit-scrollbar-thumb,#usersList::-webkit-scrollbar-thumb{background:rgba(170,223,255,.45);border-radius:999px;border:2px solid transparent;background-clip:padding-box}
+    .empty{margin-top:14vh;text-align:center;color:var(--muted);font-size:13px}
+    .msg{margin:10px 0;padding:12px 13px;border-radius:14px;border:1px solid rgba(186,232,255,.16);background:linear-gradient(180deg,rgba(12,44,67,.7),rgba(7,32,52,.72));box-shadow:0 8px 20px rgba(5,20,31,.25);max-width:min(88%,820px);word-break:break-word}
+    .msg.mine{margin-left:auto;background:linear-gradient(180deg,rgba(19,70,112,.8),rgba(13,48,78,.84));border-color:rgba(152,217,255,.3)}
+    .meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-bottom:7px}
+    .name{font-weight:700;color:#c6ecff;display:flex;align-items:center;gap:6px;min-width:0}
+    .badge{font-size:10px;font-weight:700;line-height:1;padding:5px 7px;border-radius:999px;border:1px solid rgba(180,229,255,.3);background:rgba(196,235,255,.12)}
+    .badge.v{border-color:rgba(72,216,157,.52);background:rgba(60,210,151,.2)}
+    .badge.u{border-color:rgba(255,204,105,.55);background:rgba(255,194,70,.2)}
+    .text{white-space:pre-wrap;line-height:1.42;font-size:14px}
+    .composer{border-top:1px solid rgba(181,229,255,.15);padding:10px;display:flex;flex-direction:column;gap:8px;background:transparent}
+    #messageInput{width:100%;min-height:78px;max-height:200px;resize:vertical;border-radius:13px;border:1px solid rgba(183,230,255,.2);background:rgba(8,24,37,.86);color:var(--text);padding:10px 12px;outline:none;font-size:14px;line-height:1.38}
+    #messageInput:focus{border-color:rgba(111,189,255,.62);box-shadow:0 0 0 3px rgba(57,151,255,.17)}
+    .compFoot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:34px}
+    #typingHint{color:var(--muted);font-size:12px;min-height:16px}
+    .compRight{display:flex;align-items:center;gap:10px}
+    #charCount{font-size:12px;color:var(--muted)}
+    #charCount.warn{color:var(--warn)}
+    .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(5,16,25,.68);backdrop-filter:blur(4px);z-index:3}
+    .overlay.show{display:flex}
+    .overlayCard{width:min(420px,100%);border-radius:16px;border:1px solid rgba(181,229,255,.23);background:linear-gradient(180deg,rgba(11,31,47,.96),rgba(8,23,35,.96));padding:14px;box-shadow:var(--shadow)}
+    .overlayCard h3{margin:0;font-size:18px}
+    .overlayCard p{margin:8px 0 0;color:var(--muted);line-height:1.4;font-size:14px}
+    .overlayActions{margin-top:14px;display:flex;justify-content:flex-end;gap:10px}
+    .adminBody{position:relative;z-index:1;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:12px}
+    .sec{font-size:11px;text-transform:uppercase;letter-spacing:.22px;color:var(--muted);margin-bottom:6px;font-weight:700}
+    .searchRow{display:grid;grid-template-columns:1fr auto;gap:8px}
+    .searchRow input,.inlineEdit input,.authField{width:100%;border-radius:11px;border:1px solid rgba(185,231,255,.22);background:rgba(8,24,37,.8);color:var(--text);font-size:13px;outline:none;padding:9px 10px}
+    .searchRow input:focus,.inlineEdit input:focus,.authField:focus{border-color:rgba(111,189,255,.65);box-shadow:0 0 0 3px rgba(57,151,255,.17)}
+    #usersList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px}
+    .userCard{border:1px solid rgba(183,231,255,.2);border-radius:14px;background:linear-gradient(180deg,rgba(12,36,54,.82),rgba(8,26,40,.88));padding:10px;display:flex;flex-direction:column;gap:8px}
+    .userName{font-size:14px;font-weight:700;color:#d7f2ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .userMeta{font-size:11px;color:var(--muted);word-break:break-all;line-height:1.32}
+    .statusRow,.uActions{display:flex;gap:6px;flex-wrap:wrap}
+    .sp{font-size:10px;line-height:1;padding:5px 7px;border-radius:999px;border:1px solid rgba(176,228,255,.25);background:rgba(188,233,255,.1)}
+    .sp.v{border-color:rgba(72,216,157,.48);background:rgba(60,210,151,.18)}
+    .sp.u{border-color:rgba(255,204,105,.55);background:rgba(255,194,70,.2)}
+    .sp.a{border-color:rgba(92,170,255,.55);background:rgba(92,170,255,.2)}
+    .sp.d{border-color:rgba(255,122,111,.5);background:rgba(255,122,111,.2)}
+    .sp.w{border-color:rgba(255,206,106,.45);background:rgba(255,206,106,.18)}
+    .inlineEdit{display:grid;grid-template-columns:1fr auto;gap:6px}
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:80;padding:16px;background:rgba(4,13,20,.7);backdrop-filter:blur(6px)}
+    .modal.show{display:flex}
+    .authCard{width:min(430px,100%);border-radius:18px;border:1px solid rgba(188,233,255,.27);background:linear-gradient(180deg,rgba(12,35,52,.98),rgba(8,25,38,.98));box-shadow:var(--shadow);overflow:hidden}
+    .authHead{padding:14px;border-bottom:1px solid rgba(178,228,255,.15);background:linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
+    .authHead h2{margin:0;font-size:20px}
+    .authHead p{margin:5px 0 0;font-size:13px;line-height:1.4;color:var(--muted)}
+    .tabs{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .tab{border:1px solid rgba(190,234,255,.23);background:rgba(186,234,255,.08);color:var(--text);border-radius:10px;padding:8px;font-weight:700;cursor:pointer}
+    .tab.active{border-color:rgba(105,191,255,.6);background:rgba(73,167,255,.28)}
+    .authBody{padding:14px}
+    .authForm{display:none;flex-direction:column;gap:10px}
+    .authForm.active{display:flex}
+    .hint{color:var(--muted);font-size:12px;line-height:1.3}
+    .authErr{min-height:18px;color:#ff978f;font-size:12px;font-weight:700;margin-top:8px}
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:90;display:none;border-radius:999px;border:1px solid rgba(186,233,255,.2);padding:9px 13px;font-size:13px;background:linear-gradient(180deg,rgba(11,42,64,.92),rgba(8,30,47,.9));box-shadow:var(--shadow)}
+    .toast.show{display:block}
+    .toast.ok{border-color:rgba(80,214,161,.34);background:linear-gradient(180deg,rgba(17,61,47,.93),rgba(12,44,35,.93))}
+    .toast.danger{border-color:rgba(255,132,123,.35);background:linear-gradient(180deg,rgba(77,26,26,.93),rgba(52,18,18,.93))}
+    @media (max-width:980px){body{overflow:auto}.layout{flex-direction:column;min-height:100%}.adminCol{width:100%;min-width:0;min-height:360px}.chatCol{min-height:68vh}.pill{max-width:180px}}
+  </style>
 </head>
-
 <body>
-  <div class="wrap centered">
-    <!-- CHAT -->
-    <div class="mainCol">
+  <div class="layout centered" id="layout">
+    <section class="chatCol">
       <div class="card">
-        <div class="hdr">
+        <header class="hdr">
           <div>
-            <div class="title">Ocean chat thingy</div>
-            <div class="sub" id="status">Connecting…</div>
+            <div class="title">Ocean Chat</div>
+            <div class="sub" id="status">Signed out</div>
           </div>
           <div class="pillRow">
             <div class="pill" id="mePill">Not signed in</div>
-            <div class="pill admin" id="adminPill" style="display:none;">Admin</div>
+            <div class="pill admin" id="adminPill">Admin</div>
             <button class="btn ghost" id="signOutTop" style="display:none;">Sign out</button>
           </div>
-        </div>
+        </header>
 
         <div class="body">
-          <div id="messages" aria-live="polite"></div>
-
+          <div id="messages" aria-live="polite"><div class="empty">Sign in to start chatting.</div></div>
           <div class="composer">
-            <div class="composerMain">
-              <div class="typingBar" id="typingBar">
-                <span class="typingDots" aria-hidden="true"><span></span><span></span><span></span></span>
-                <span id="typingText">Drafting message…</span>
+            <textarea id="messageInput" maxlength="2000" placeholder="Write a message..." disabled></textarea>
+            <div class="compFoot">
+              <div id="typingHint"></div>
+              <div class="compRight">
+                <div id="charCount">0 / 2000</div>
+                <button class="btn" id="sendBtn" disabled>Send</button>
               </div>
-              <textarea id="messageInput" placeholder="Type…" maxlength="2000"></textarea>
             </div>
-            <button class="btn" id="sendBtn">Send</button>
           </div>
-
           <div class="overlay" id="blockedOverlay">
             <div class="overlayCard">
               <h3 id="blockedTitle">Blocked</h3>
-              <p id="blockedText">You cannot use the chat right now.</p>
-              <div style="display:flex; gap:10px; justify-content:flex-end;">
-                <button class="btn ghost" id="blockedSignOut">Sign out</button>
-              </div>
+              <p id="blockedText">You cannot use this chat right now.</p>
+              <div class="overlayActions"><button class="btn ghost" id="blockedSignOut">Sign out</button></div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ADMIN PANEL -->
-    <div class="sideCol">
-      <div class="card" id="adminPanel" style="display:none;">
-        <div class="hdr">
+    <aside class="adminCol" id="adminCol" style="display:none;">
+      <div class="card">
+        <header class="hdr">
           <div>
-            <div class="title">Admin</div>
-            <div class="sub">Verify • Ban • Logout • Rename • Delete</div>
+            <div class="title">Admin Panel</div>
+            <div class="sub">Verify, moderate, and manage users</div>
           </div>
           <button class="btn ghost small" id="refreshAdmin">Refresh</button>
-        </div>
-
+        </header>
         <div class="adminBody">
           <div>
-            <div class="sectionTitle">Search</div>
+            <div class="sec">Search</div>
             <div class="searchRow">
-              <input id="adminSearch" placeholder="Search name / uid…" />
+              <input id="adminSearch" placeholder="Search by display name, username, or uid" autocomplete="off" />
               <button class="btn ghost small" id="clearSearch">Clear</button>
             </div>
           </div>
-
-          <div style="display:flex; flex-direction:column; min-height:0; flex:1;">
-            <div class="sectionTitle">Users</div>
+          <div style="display:flex;flex-direction:column;min-height:0;flex:1;">
+            <div class="sec">Users</div>
             <div id="usersList"></div>
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   </div>
 
-  <!-- Name prompt (unique names) -->
-  <div class="modalWrap" id="nameModal" aria-modal="true" role="dialog">
-    <div class="modal">
-      <h2 style="margin:0 0 6px 0;">Create account</h2>
-      <p style="margin:0; color:rgba(229,231,235,.78); line-height:1.35;">
-        Pick a <b>unique</b> name. New users start <b>Unverified</b> until an admin verifies you.
-      </p>
-      <input id="displayName" placeholder="e.g. Alex" maxlength="24" autocomplete="off" />
-      <div style="display:flex; gap:10px; margin-top:12px;">
-        <button class="btn" id="saveNameBtn" style="flex:1;">Enter</button>
-        <button class="btn ghost" id="signOutBtn" type="button">Cancel</button>
+  <div class="modal show" id="authModal" aria-modal="true" role="dialog">
+    <div class="authCard">
+      <div class="authHead">
+        <h2>Welcome</h2>
+        <p>Use username and password. Username is also your display name.</p>
+        <div class="tabs">
+          <button class="tab active" id="tabLogin" type="button">Login</button>
+          <button class="tab" id="tabRegister" type="button">Create Account</button>
+        </div>
       </div>
-      <div class="err" id="nameErr"></div>
+      <div class="authBody">
+        <form class="authForm active" id="loginForm" novalidate>
+          <input class="authField" id="loginUsername" placeholder="Username" autocomplete="username" />
+          <input class="authField" id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" />
+          <div class="hint">Press Enter to login.</div>
+          <button class="btn" id="loginBtn" type="submit">Login</button>
+        </form>
+        <form class="authForm" id="registerForm" novalidate>
+          <input class="authField" id="registerUsername" placeholder="Username (3-24 chars)" autocomplete="username" />
+          <input class="authField" id="registerPassword" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+          <div class="hint">New accounts start as Unverified until an admin verifies.</div>
+          <button class="btn" id="registerBtn" type="submit">Create account</button>
+        </form>
+        <div class="authErr" id="authErr"></div>
+      </div>
     </div>
   </div>
 
-  <div id="toast" class="toast"></div>
+  <div class="toast" id="toast"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
     import {
       getAuth,
-      signInAnonymously,
       onAuthStateChanged,
-      signOut
+      signOut,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      deleteUser
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
     import {
       getFirestore,
       doc,
-      setDoc,
       getDoc,
+      setDoc,
       updateDoc,
+      deleteDoc,
       collection,
-      addDoc,
       query,
+      where,
       orderBy,
-      onSnapshot,
-      serverTimestamp,
       limit,
       limitToLast,
-      deleteDoc,
+      onSnapshot,
+      addDoc,
       runTransaction,
-      writeBatch,
+      serverTimestamp,
       getDocs,
-      where
+      writeBatch
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-    // ---- Firebase config (yours)
     const firebaseConfig = {
       apiKey: "AIzaSyABdyFe7WdhRqvj5alg1yKcS3xOZW5KV0k",
       authDomain: "darkchatroom-4b547.firebaseapp.com",
@@ -679,430 +233,317 @@
     const auth = getAuth();
     const db = getFirestore();
 
-    // ---- DOM
-    const $ = (id) => document.getElementById(id);
-    const wrapEl = document.querySelector(".wrap");
-    const sideCol = document.querySelector(".sideCol");
+    const AUTH_DOMAIN = "username.darkchat.local";
+    const MAX_MESSAGE_LENGTH = 2000;
+    const USERNAME_RE = /^[a-z0-9](?:[a-z0-9._-]{1,22}[a-z0-9])?$/;
 
+    const $ = (id) => document.getElementById(id);
+
+    const layout = $("layout");
+    const adminCol = $("adminCol");
     const statusEl = $("status");
     const mePill = $("mePill");
     const adminPill = $("adminPill");
     const signOutTop = $("signOutTop");
-
     const messagesEl = $("messages");
     const messageInput = $("messageInput");
     const sendBtn = $("sendBtn");
-    const typingBar = $("typingBar");
-    const typingText = $("typingText");
-
+    const typingHint = $("typingHint");
+    const charCount = $("charCount");
     const blockedOverlay = $("blockedOverlay");
     const blockedTitle = $("blockedTitle");
     const blockedText = $("blockedText");
     const blockedSignOut = $("blockedSignOut");
-
-    const adminPanel = $("adminPanel");
     const refreshAdmin = $("refreshAdmin");
     const usersList = $("usersList");
     const adminSearch = $("adminSearch");
     const clearSearch = $("clearSearch");
-
-    const nameModal = $("nameModal");
-    const displayNameEl = $("displayName");
-    const saveNameBtn = $("saveNameBtn");
-    const signOutBtn = $("signOutBtn");
-    const nameErr = $("nameErr");
-
+    const authModal = $("authModal");
+    const tabLogin = $("tabLogin");
+    const tabRegister = $("tabRegister");
+    const loginForm = $("loginForm");
+    const registerForm = $("registerForm");
+    const loginUsername = $("loginUsername");
+    const loginPassword = $("loginPassword");
+    const registerUsername = $("registerUsername");
+    const registerPassword = $("registerPassword");
+    const loginBtn = $("loginBtn");
+    const registerBtn = $("registerBtn");
+    const authErr = $("authErr");
     const toast = $("toast");
 
-    // ---- Device ID (ban persistence)
+    let toastTimer = null;
+    let me = null;
+    let myProfile = null;
+    let currentAuthMode = "login";
+    let unsubProfile = null;
+    let unsubUsers = null;
+    let unsubMessages = null;
+    let authSessionNonce = 0;
+    let usersRenderQueued = false;
+    let adminSearchTimer = null;
+    let lastMessageRenderKey = "";
+    let lastMessagesSnapshot = null;
+    let liveUsers = [];
+    const userCache = new Map();
+
     function getDeviceId() {
-      const k = "mgc_device_id";
-      let v = localStorage.getItem(k);
-      if (!v) {
-        v = (crypto?.randomUUID
-          ? crypto.randomUUID()
-          : ("dev_" + Math.random().toString(36).slice(2) + Date.now()));
-        localStorage.setItem(k, v);
+      const key = "ocean_chat_device_id";
+      let value = localStorage.getItem(key);
+      if (!value) {
+        value = (crypto?.randomUUID ? crypto.randomUUID() : `dev_${Math.random().toString(36).slice(2)}${Date.now()}`);
+        localStorage.setItem(key, value);
       }
-      return v;
+      return value;
     }
     const deviceId = getDeviceId();
 
-    const ACCOUNT_KEY = "mgc_account";
-    const ACCOUNT_COOKIE = "mgc_account_cookie";
-    const COOKIE_ID_KEY = "mgc_cookie_id";
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const setStatus = (t) => { statusEl.textContent = t; };
 
-    function getCookie(name) {
-      const row = document.cookie
-        .split("; ")
-        .find(v => v.startsWith(name + "="));
-      return row ? decodeURIComponent(row.split("=").slice(1).join("=")) : "";
-    }
-
-    function setCookie(name, value, days = 365) {
-      const expires = new Date(Date.now() + days * 86400000).toUTCString();
-      document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-    }
-
-    function clearCookie(name) {
-      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
-    }
-
-    function getCookieId() {
-      let v = getCookie(COOKIE_ID_KEY) || localStorage.getItem(COOKIE_ID_KEY);
-      if (!v) {
-        v = (crypto?.randomUUID
-          ? crypto.randomUUID()
-          : ("ck_" + Math.random().toString(36).slice(2) + Date.now()));
-      }
-      localStorage.setItem(COOKIE_ID_KEY, v);
-      setCookie(COOKIE_ID_KEY, v, 365);
-      return v;
-    }
-    const cookieId = getCookieId();
-
-    let currentPublicIp = null;
-    async function fetchPublicIp() {
-      const endpoints = [
-        "https://api64.ipify.org?format=json",
-        "https://api.ipify.org?format=json"
-      ];
-      for (const url of endpoints) {
-        try {
-          const ctl = new AbortController();
-          const timer = setTimeout(() => ctl.abort(), 1800);
-          const res = await fetch(url, { signal: ctl.signal, cache: "no-store" });
-          clearTimeout(timer);
-          if (!res.ok) continue;
-          const data = await res.json();
-          if (data?.ip && typeof data.ip === "string") return data.ip;
-        } catch (_) {}
-      }
-      return null;
-    }
-    fetchPublicIp().then((ip) => {
-      if (ip) currentPublicIp = ip;
-    }).catch(() => {});
-
-    function safeParse(raw) {
-      try {
-        const obj = JSON.parse(raw);
-        return obj && typeof obj === "object" ? obj : null;
-      } catch {
-        return null;
-      }
-    }
-
-    function normalizeSavedAccount(obj) {
-      if (!obj || typeof obj !== "object") return null;
-      return {
-        uid: typeof obj.uid === "string" ? obj.uid : null,
-        deviceId: typeof obj.deviceId === "string" ? obj.deviceId : null,
-        displayName: typeof obj.displayName === "string" ? obj.displayName : null,
-        nameKey: typeof obj.nameKey === "string" ? obj.nameKey : null,
-        cookieId: typeof obj.cookieId === "string" ? obj.cookieId : null,
-        ip: typeof obj.ip === "string" ? obj.ip : null,
-        savedAt: typeof obj.savedAt === "number" ? obj.savedAt : 0
-      };
-    }
-
-    function loadSavedAccounts() {
-      const items = [];
-      const localObj = normalizeSavedAccount(safeParse(localStorage.getItem(ACCOUNT_KEY)));
-      const cookieObj = normalizeSavedAccount(safeParse(getCookie(ACCOUNT_COOKIE)));
-      if (localObj) items.push(localObj);
-      if (cookieObj) items.push(cookieObj);
-
-      const deduped = [];
-      const seen = new Set();
-      for (const item of items) {
-        const sig = [item.uid || "", item.deviceId || "", item.nameKey || "", item.cookieId || "", item.ip || ""].join("|");
-        if (seen.has(sig)) continue;
-        seen.add(sig);
-        deduped.push(item);
-      }
-      return deduped.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
-    }
-
-    function saveAccountHints(profile) {
-      if (!me?.uid || !profile) return;
-      const displayName = typeof profile.displayName === "string" ? profile.displayName : "";
-      const nameKey = typeof profile.nameKey === "string" ? profile.nameKey : "";
-      const payload = {
-        uid: me.uid,
-        deviceId,
-        displayName,
-        nameKey,
-        cookieId,
-        ip: currentPublicIp || null,
-        savedAt: Date.now()
-      };
-      try {
-        localStorage.setItem(ACCOUNT_KEY, JSON.stringify(payload));
-      } catch (e) {
-        console.warn("Could not save account to device", e);
-      }
-      try {
-        setCookie(ACCOUNT_COOKIE, JSON.stringify(payload), 365);
-      } catch (e) {
-        console.warn("Could not save account cookie", e);
-      }
-    }
-
-    function clearSavedAccountHints() {
-      try { localStorage.removeItem(ACCOUNT_KEY); } catch (_) {}
-      clearCookie(ACCOUNT_COOKIE);
-    }
-
-    async function tryAutoRestoreProfile(currentUid) {
-      const savedCandidates = loadSavedAccounts();
-      if (!savedCandidates.length) return false;
-
-      const saved = savedCandidates.find((candidate) => {
-        if (!candidate || !candidate.displayName || !candidate.nameKey) return false;
-        return !!(
-          (candidate.uid && candidate.uid === currentUid) ||
-          (candidate.deviceId && candidate.deviceId === deviceId) ||
-          (candidate.cookieId && candidate.cookieId === cookieId) ||
-          (candidate.ip && currentPublicIp && candidate.ip === currentPublicIp)
-        );
-      });
-
-      if (!saved) return false;
-
-      const uref = doc(db, "users", currentUid);
-      const nref = doc(db, "usernames", saved.nameKey);
-
-      try {
-        await runTransaction(db, async (tx) => {
-          const uSnap = await tx.get(uref);
-          if (uSnap.exists()) return;
-
-          const nSnap = await tx.get(nref);
-          if (nSnap.exists() && nSnap.data()?.uid !== currentUid) {
-            throw new Error("NAME_TAKEN");
-          }
-
-          if (!nSnap.exists()) {
-            tx.set(nref, {
-              uid: currentUid,
-              displayName: saved.displayName,
-              createdAt: serverTimestamp()
-            });
-          }
-
-          tx.set(uref, {
-            uid: currentUid,
-            displayName: saved.displayName,
-            nameKey: saved.nameKey,
-            deviceId: deviceId,
-            verified: false,
-            banned: false,
-            loggedOut: false,
-            isAdmin: false,
-            createdAt: serverTimestamp()
-          }, { merge: true });
-        });
-
-        return true;
-      } catch (e) {
-        console.warn("Auto-restore failed", e);
-        return false;
-      }
-    }
-
-    // ---- State
-    let me = null;
-    let myProfile = null;
-    let unsubProfile = null;
-    let unsubMessages = null;
-    let unsubUsers = null;
-
-    const userCache = new Map();
-    let lastMessagesSnapshot = null;
-    let liveUsers = [];
-
-    // ✅ NEW: ensures we scroll to bottom on first load
-    let didInitialScroll = false;
-    let lastMessageRenderKey = "";
-    let usersRenderQueued = false;
-    let adminSearchTimer = null;
-
-    let typingTimer = null;
-
-    function setTypingState(show, text = "Drafting message…") {
-      if (!typingBar) return;
-      typingText.textContent = text;
-      typingBar.classList.toggle("show", !!show);
-    }
-
-    function pulseTypingState() {
-      const hasText = !!messageInput.value.trim();
-      if (!hasText) {
-        setTypingState(false);
-        return;
-      }
-      setTypingState(true, messageInput.value.trim().length > 48 ? "Almost ready to send…" : "Drafting message…");
-      if (typingTimer) clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => {
-        if (!messageInput.value.trim()) setTypingState(false);
-      }, 1400);
-    }
-
-    function showToast(text) {
+    function showToast(text, tone = "") {
       toast.textContent = text;
-      toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 2200);
+      toast.className = `toast show ${tone}`.trim();
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.className = "toast"; }, 2400);
     }
 
-    function setErr(text) {
-      if (!text) {
-        nameErr.style.display = "none";
-        nameErr.textContent = "";
-        return;
-      }
-      nameErr.style.display = "block";
-      nameErr.textContent = text;
-    }
-
-    function openNameModal() {
-      setErr("");
-      displayNameEl.value = "";
-      nameModal.classList.add("show");
-      setTimeout(() => displayNameEl.focus(), 30);
-    }
-
-    function closeNameModal() {
-      nameModal.classList.remove("show");
-    }
-
-    function fmtTime(ts) {
-      if (!ts?.toDate) return "";
-      return ts.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-
-    function escapeHTML(s) {
-      return String(s || "").replace(/[&<>"']/g, (c) => ({
+    function escapeHtml(input) {
+      return String(input ?? "").replace(/[&<>"']/g, (ch) => ({
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",
         "\"": "&quot;",
         "'": "&#39;"
-      }[c]));
+      }[ch]));
     }
 
-    function normalizeName(raw) {
-      const display = String(raw || "").trim().replace(/\s+/g, " ");
-      const key = display.toLowerCase();
-      return { display, key };
+    function formatTime(ts) {
+      if (!ts?.toDate) return "";
+      return ts.toDate().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     }
 
-    function canDeleteUser(uid) {
-      return myProfile?.isAdmin === true && !!uid && uid !== me?.uid;
+    const normalizeUsername = (raw) => String(raw || "").trim().toLowerCase();
+    const normalizeDisplayName = (raw) => String(raw || "").trim().replace(/\s+/g, " ");
+    const validateUsername = (username) => USERNAME_RE.test(username);
+    const validatePassword = (password) => typeof password === "string" && password.length >= 8 && password.length <= 72;
+    const validateDisplayName = (displayName) => displayName.length >= 2 && displayName.length <= 32;
+    const makeLoginEmail = (username) => `${username}@${AUTH_DOMAIN}`;
+
+    function setAuthError(text) {
+      authErr.textContent = text || "";
     }
 
-    // Improved deleteUserEverywhere: paginates messages and commits periodically to avoid large batches
-    async function deleteUserEverywhere(uid) {
-      if (!canDeleteUser(uid)) throw new Error("CANNOT_DELETE_USER");
+    function setAuthBusy(isBusy) {
+      loginBtn.disabled = isBusy;
+      registerBtn.disabled = isBusy;
+      tabLogin.disabled = isBusy;
+      tabRegister.disabled = isBusy;
+      loginUsername.disabled = isBusy;
+      loginPassword.disabled = isBusy;
+      registerUsername.disabled = isBusy;
+      registerPassword.disabled = isBusy;
+    }
 
-      const uref = doc(db, "users", uid);
-      const userSnap = await getDoc(uref);
-      if (!userSnap.exists()) throw new Error("NO_USER");
+    function setAuthMode(mode) {
+      currentAuthMode = mode === "register" ? "register" : "login";
+      const isLogin = currentAuthMode === "login";
+      tabLogin.classList.toggle("active", isLogin);
+      tabRegister.classList.toggle("active", !isLogin);
+      loginForm.classList.toggle("active", isLogin);
+      registerForm.classList.toggle("active", !isLogin);
+      setAuthError("");
+      setTimeout(() => {
+        if (isLogin) loginUsername.focus();
+        else registerUsername.focus();
+      }, 20);
+    }
 
-      const userData = userSnap.data() || {};
-      const nameKey = userData.nameKey || null;
-      const targetDeviceId = userData.deviceId || null;
+    function openAuthModal(mode = "login") {
+      authModal.classList.add("show");
+      setAuthMode(mode);
+    }
 
-      let batch = writeBatch(db);
-      let ops = 0;
-      const MAX_OPS = 400; // keep well under Firestore limit (500)
-      const commitBatch = async () => {
-        if (ops > 0) {
-          try {
-            await batch.commit();
-          } finally {
-            batch = writeBatch(db);
-            ops = 0;
-          }
-        }
-      };
+    function closeAuthModal() {
+      authModal.classList.remove("show");
+      setAuthError("");
+      loginPassword.value = "";
+      registerPassword.value = "";
+    }
 
-      // delete username doc first if present
-      if (nameKey) {
-        batch.delete(doc(db, "usernames", nameKey));
-        ops++;
+    function setComposerEnabled(enabled) {
+      messageInput.disabled = !enabled;
+      sendBtn.disabled = !enabled;
+    }
+
+    function resetMessageUi() {
+      messagesEl.innerHTML = '<div class="empty">No messages yet.</div>';
+      messageInput.value = "";
+      typingHint.textContent = "";
+      updateCharCount();
+      lastMessageRenderKey = "";
+      lastMessagesSnapshot = null;
+    }
+
+    function clearSubscriptions() {
+      if (unsubProfile) { unsubProfile(); unsubProfile = null; }
+      if (unsubUsers) { unsubUsers(); unsubUsers = null; }
+      if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+      userCache.clear();
+      liveUsers = [];
+      usersRenderQueued = false;
+      if (adminSearchTimer) { clearTimeout(adminSearchTimer); adminSearchTimer = null; }
+    }
+
+    function resetSignedOutUi() {
+      mePill.textContent = "Not signed in";
+      adminPill.style.display = "none";
+      signOutTop.style.display = "none";
+      layout.classList.add("centered");
+      adminCol.style.display = "none";
+      setBlocked(null);
+      setComposerEnabled(false);
+      resetMessageUi();
+      usersList.innerHTML = "";
+    }
+
+    function profileBlockReason(profile) {
+      if (!profile) {
+        return {
+          title: "Profile missing",
+          text: "This account has no profile document in Firestore. Ask an admin to restore it or create a new account."
+        };
       }
-
-      // delete device ban doc if present
-      if (targetDeviceId) {
-        batch.delete(doc(db, "bannedDevices", targetDeviceId));
-        ops++;
+      if (profile.banned === true) {
+        return { title: "Account banned", text: "An admin banned this account or device." };
       }
-
-      // delete messages in pages
-      while (true) {
-        const msgSnap = await getDocs(query(collection(db, "messages"), where("uid", "==", uid), limit(300)));
-        if (msgSnap.empty) break;
-
-        msgSnap.forEach((msgDoc) => {
-          batch.delete(msgDoc.ref);
-          ops++;
-          // if approaching batch limit, commit and reset
-          if (ops >= MAX_OPS) {
-            // we'll commit after the loop below
-          }
-        });
-
-        // commit when we have some ops or to stay under limit
-        if (ops >= MAX_OPS) {
-          await commitBatch();
-        } else {
-          // commit here to ensure deletes applied in chunks
-          await commitBatch();
-        }
+      if (profile.loggedOut === true) {
+        return { title: "Force logged out", text: "An admin blocked this account. Ask an admin to clear the logout flag." };
       }
-
-      // finally delete user doc
-      batch.delete(uref);
-      ops++;
-
-      await commitBatch();
+      return null;
     }
 
-    // ✅ NEW: force scroll to bottom (used on initial load)
-    function scrollToBottomNow() {
-      requestAnimationFrame(() => {
-        messagesEl.scrollTop = messagesEl.scrollHeight + 1000;
-      });
+    function setBlocked(blockState) {
+      if (!blockState) {
+        blockedOverlay.classList.remove("show");
+        if (me && myProfile && !profileBlockReason(myProfile)) setComposerEnabled(true);
+        return;
+      }
+      blockedTitle.textContent = blockState.title;
+      blockedText.textContent = blockState.text;
+      blockedOverlay.classList.add("show");
+      setComposerEnabled(false);
     }
 
-    // existing near-bottom auto-scroll (used for live updates)
-    function autoScrollNearBottom() {
-      const nearBottom = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 140;
-      if (nearBottom) requestAnimationFrame(() => messagesEl.scrollTop = messagesEl.scrollHeight);
+    function updateHeaderIdentity() {
+      if (!me || !myProfile) { mePill.textContent = "Not signed in"; return; }
+      const display = myProfile.displayName || "Unknown";
+      const usernameKey = myProfile.usernameKey || myProfile.nameKey || "";
+      const username = usernameKey ? ` (@${usernameKey})` : "";
+      const verified = myProfile.verified ? " - verified" : " - unverified";
+      mePill.textContent = `You: ${display}${username}${verified}`;
     }
 
-    function buildMessageRenderKey(qs) {
+    function applyRoleUi() {
+      if (!myProfile?.isAdmin) {
+        adminPill.style.display = "none";
+        layout.classList.add("centered");
+        adminCol.style.display = "none";
+        return;
+      }
+      adminPill.style.display = "inline-block";
+      layout.classList.remove("centered");
+      adminCol.style.display = "flex";
+    }
+
+    function updateCharCount() {
+      const len = messageInput.value.length;
+      charCount.textContent = `${len} / ${MAX_MESSAGE_LENGTH}`;
+      charCount.classList.toggle("warn", len > Math.floor(MAX_MESSAGE_LENGTH * 0.9));
+      typingHint.textContent = !len ? "" : (len > 80 ? "Press Enter to send, Shift+Enter for new line" : "Typing...");
+    }
+
+    function scrollToBottom() {
+      requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+    }
+    function buildMessageRenderKey(snapshot) {
       const parts = [];
-      qs.forEach((d) => {
-        const m = d.data();
-        const u = userCache.get(m.uid) || {};
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const user = userCache.get(data.uid) || {};
         parts.push([
-          d.id,
-          m.uid || "",
-          u.displayName || "",
-          u.verified ? "1" : "0",
-          m.text || "",
-          m.createdAt?.seconds || "",
-          m.createdAt?.nanoseconds || ""
+          docSnap.id,
+          data.uid || "",
+          data.createdAt?.seconds || "",
+          data.createdAt?.nanoseconds || "",
+          data.text || "",
+          user.displayName || "",
+          user.verified ? "1" : "0"
         ].join("|"));
       });
       return parts.join("~");
     }
 
+    function renderMessages(snapshot, forceScroll = false) {
+      if (!snapshot || snapshot.empty) {
+        messagesEl.innerHTML = '<div class="empty">No messages yet.</div>';
+        setStatus("Live - 0 loaded");
+        return;
+      }
+
+      const renderKey = buildMessageRenderKey(snapshot);
+      let count = 0;
+      snapshot.forEach(() => { count += 1; });
+
+      if (renderKey === lastMessageRenderKey) {
+        setStatus(`Live - ${count} loaded`);
+        if (forceScroll) scrollToBottom();
+        return;
+      }
+
+      lastMessageRenderKey = renderKey;
+      const nearBottom = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) < 130;
+
+      const frag = document.createDocumentFragment();
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const user = userCache.get(data.uid) || {};
+        const displayName = user.displayName || "Unknown";
+        const usernameSuffix = user.usernameKey ? ` @${user.usernameKey}` : "";
+        const verified = user.verified === true;
+        const isMine = !!(me && data.uid === me.uid);
+
+        const wrapper = document.createElement("article");
+        wrapper.className = `msg${isMine ? " mine" : ""}`;
+
+        const verifyBadge = verified
+          ? '<span class="badge v">Verified</span>'
+          : '<span class="badge u">Unverified</span>';
+
+        const adminTools = myProfile?.isAdmin
+          ? `<div style="margin-top:10px;display:flex;justify-content:flex-end;"><button class="btn danger small" data-delmsg="${docSnap.id}">Delete</button></div>`
+          : "";
+
+        wrapper.innerHTML = `
+          <div class="meta">
+            <div class="name"><span>${escapeHtml(displayName)}${escapeHtml(usernameSuffix)}</span>${verifyBadge}</div>
+            <span>${escapeHtml(formatTime(data.createdAt))}</span>
+          </div>
+          <div class="text">${escapeHtml(data.text || "")}</div>
+          ${adminTools}
+        `;
+
+        frag.appendChild(wrapper);
+      });
+
+      messagesEl.innerHTML = "";
+      messagesEl.appendChild(frag);
+      setStatus(`Live - ${count} loaded`);
+      if (forceScroll || nearBottom) scrollToBottom();
+    }
+
     function queueAdminUsersRender() {
-      if (!myProfile?.isAdmin || adminPanel.style.display === "none") return;
-      if (usersRenderQueued) return;
+      if (!myProfile?.isAdmin || usersRenderQueued) return;
       usersRenderQueued = true;
       requestAnimationFrame(() => {
         usersRenderQueued = false;
@@ -1110,429 +551,234 @@
       });
     }
 
-    function cleanupSubs() {
-      if (unsubProfile) { unsubProfile(); unsubProfile = null; }
-      if (unsubMessages) { unsubMessages(); unsubMessages = null; }
-      if (unsubUsers) { unsubUsers(); unsubUsers = null; }
-      userCache.clear();
-      lastMessagesSnapshot = null;
-      liveUsers = [];
-      didInitialScroll = false; // ✅ reset on auth/session changes
-      lastMessageRenderKey = "";
-      usersRenderQueued = false;
-      if (adminSearchTimer) {
-        clearTimeout(adminSearchTimer);
-        adminSearchTimer = null;
-      }
-      if (typingTimer) {
-        clearTimeout(typingTimer);
-        typingTimer = null;
-      }
-      setTypingState(false);
-    }
-
-    function setBlocked(mode) {
-      if (!mode) {
-        blockedOverlay.classList.remove("show");
-        sendBtn.disabled = false;
-        messageInput.disabled = false;
-        return;
-      }
-      blockedTitle.textContent = mode.title;
-      blockedText.textContent = mode.text;
-      blockedOverlay.classList.add("show");
-      sendBtn.disabled = true;
-      messageInput.disabled = true;
-    }
-
-    function renderMessagesFromSnapshot(qs, { forceBottom = false } = {}) {
-      const renderKey = buildMessageRenderKey(qs);
-      let count = 0;
-      qs.forEach(() => { count++; });
-
-      if (renderKey === lastMessageRenderKey) {
-        statusEl.textContent = `Live • ${count} loaded`;
-        if (forceBottom) {
-          requestAnimationFrame(() => {
-            scrollToBottomNow();
-            requestAnimationFrame(scrollToBottomNow);
-          });
-        }
-        return;
-      }
-
-      lastMessageRenderKey = renderKey;
-      messagesEl.innerHTML = "";
-      const frag = document.createDocumentFragment();
-
-      qs.forEach((d) => {
-        const m = d.data();
-
-        const time = fmtTime(m.createdAt);
-        const u = userCache.get(m.uid) || {};
-        const name = escapeHTML(u.displayName || "?");
-        const verified = u.verified === true;
-
-        const div = document.createElement("div");
-        div.className = "msg";
-
-        const vTag = verified
-          ? `<span class="tag v">Verified</span>`
-          : `<span class="tag unv">Unverified</span>`;
-
-        const adminTools = (myProfile?.isAdmin === true)
-          ? `<div class="adminMsgRow"><button class="btn danger small" data-delmsg="${d.id}">Delete</button></div>`
-          : "";
-
-        div.innerHTML = `
-          <div class="meta">
-            <div class="nameRow"><span class="name">${name}</span>${vTag}</div>
-            <div>${time}</div>
-          </div>
-          <div class="text">${escapeHTML(m.text || "")}</div>
-          ${adminTools}
-        `;
-
-        frag.appendChild(div);
-      });
-
-      messagesEl.appendChild(frag);
-      statusEl.textContent = `Live • ${count} loaded`;
-
-      if (forceBottom) {
-        requestAnimationFrame(() => {
-          scrollToBottomNow();
-          requestAnimationFrame(scrollToBottomNow);
-        });
-      } else {
-        autoScrollNearBottom();
-      }
-    }
-
-    // Render users into a fragment, keep DOM updates minimal to reduce jank
     function renderAdminUsers() {
       if (!myProfile?.isAdmin) return;
+      const queryText = (adminSearch.value || "").trim().toLowerCase();
+      const users = [...liveUsers];
 
-      const users = Array.isArray(liveUsers) ? [...liveUsers] : [];
-      const q = (adminSearch.value || "").trim().toLowerCase();
-
-      const filtered = q
-        ? users.filter(u =>
-            String(u.displayName || "").toLowerCase().includes(q) ||
-            String(u.uid || u.id || "").toLowerCase().includes(q)
-          )
+      const filtered = queryText
+        ? users.filter((u) => (`${u.displayName || ""} ${u.usernameKey || ""} ${u.uid || ""}`).toLowerCase().includes(queryText))
         : users;
 
       filtered.sort((a, b) => {
-        const av = a.verified ? 1 : 0;
-        const bv = b.verified ? 1 : 0;
-        if (av !== bv) return av - bv;
+        if ((a.isAdmin ? 1 : 0) !== (b.isAdmin ? 1 : 0)) return (b.isAdmin ? 1 : 0) - (a.isAdmin ? 1 : 0);
+        if ((a.verified ? 1 : 0) !== (b.verified ? 1 : 0)) return (a.verified ? 1 : 0) - (b.verified ? 1 : 0);
         return String(a.displayName || "").localeCompare(String(b.displayName || ""));
       });
 
-      // Build once into fragment
+      if (!filtered.length) {
+        usersList.innerHTML = '<div class="empty" style="margin-top:10px;">No matching users.</div>';
+        return;
+      }
+
       const frag = document.createDocumentFragment();
-
-      for (const u of filtered) {
-        const uid = u.uid || u.id;
-        const isMe = (uid === me.uid);
-        const forceLogoutUsed = u.loggedOut === true;
-
+      for (const row of filtered) {
+        const uid = row.uid;
+        const isMe = uid === me?.uid;
         const badges = [
-          u.isAdmin ? '<span class="statusPill admin">Admin</span>' : '',
-          u.verified ? '<span class="statusPill verify">Verified</span>' : '<span class="statusPill unverify">Unverified</span>',
-          u.banned ? '<span class="statusPill danger">Banned</span>' : '',
-          forceLogoutUsed ? '<span class="statusPill warn">Force logout used</span>' : ''
-        ].filter(Boolean).join('');
+          row.isAdmin ? '<span class="sp a">Admin</span>' : "",
+          row.verified ? '<span class="sp v">Verified</span>' : '<span class="sp u">Unverified</span>',
+          row.banned ? '<span class="sp d">Banned</span>' : "",
+          row.loggedOut ? '<span class="sp w">Forced logout</span>' : ""
+        ].filter(Boolean).join("");
 
-        const card = document.createElement("div");
+        const card = document.createElement("article");
         card.className = "userCard";
-
         card.innerHTML = `
-          <div class="userTop">
-            <div class="uName">${escapeHTML(u.displayName || "(no name)")}</div>
-            <div class="uMeta">UID: ${escapeHTML(String(uid))}</div>
+          <div>
+            <div class="userName">${escapeHtml(row.displayName || "(no display name)")}</div>
+            <div class="userMeta">@${escapeHtml(row.usernameKey || "no-username")}<br />UID: ${escapeHtml(uid)}</div>
             <div class="statusRow">${badges}</div>
           </div>
-
           <div class="inlineEdit">
-            <input data-rename="${uid}" value="${escapeHTML(u.displayName || "")}" placeholder="Enter a new username" maxlength="24" autocomplete="off" spellcheck="false" />
-            <button class="btn ok small" data-renbtn="${uid}">Rename</button>
+            <input data-rename-display="${escapeHtml(uid)}" value="${escapeHtml(row.displayName || "")}" maxlength="32" placeholder="Display name" autocomplete="off" />
+            <button class="btn ok small" data-save-display="${escapeHtml(uid)}">Save</button>
           </div>
-
           <div class="uActions">
-            <button class="btn ghost small" data-verify="${uid}" data-verifyval="${u.verified ? "0" : "1"}">
-              ${u.verified ? "Unverify" : "Verify"}
-            </button>
-
-            <button class="btn ghost small" data-clearlogout="${uid}" ${forceLogoutUsed ? "" : "disabled"}>
-              Clear logout
-            </button>
-
-            <button class="btn ghost small" data-logout="${uid}" ${(isMe || forceLogoutUsed) ? "disabled" : ""}>
-              ${forceLogoutUsed ? "Forced logout used" : "Force logout"}
-            </button>
-
-            <button class="btn ghost small"
-              data-setadmin="${uid}"
-              data-setadminval="${u.isAdmin ? "0" : "1"}"
-              ${isMe ? "disabled" : ""}>
-              ${u.isAdmin ? "Remove admin" : "Make admin"}
-            </button>
-
-            <button class="btn danger small" data-ban="${uid}" data-banval="${u.banned ? "0" : "1"}">
-              ${u.banned ? "Unban" : "Ban"}
-            </button>
-
-            <button class="btn danger small" data-deleteuser="${uid}" ${canDeleteUser(uid) ? "" : "disabled"}>
-              Delete user
-            </button>
+            <button class="btn ghost small" data-verify="${escapeHtml(uid)}" data-verifyval="${row.verified ? "0" : "1"}">${row.verified ? "Unverify" : "Verify"}</button>
+            <button class="btn ghost small" data-logout="${escapeHtml(uid)}" ${isMe || row.loggedOut ? "disabled" : ""}>Force logout</button>
+            <button class="btn ghost small" data-clearlogout="${escapeHtml(uid)}" ${row.loggedOut ? "" : "disabled"}>Clear logout</button>
+            <button class="btn ghost small" data-setadmin="${escapeHtml(uid)}" data-setadminval="${row.isAdmin ? "0" : "1"}" ${isMe ? "disabled" : ""}>${row.isAdmin ? "Remove admin" : "Make admin"}</button>
+            <button class="btn danger small" data-ban="${escapeHtml(uid)}" data-banval="${row.banned ? "0" : "1"}">${row.banned ? "Unban" : "Ban"}</button>
+            <button class="btn danger small" data-deleteuser="${escapeHtml(uid)}" ${canDeleteUser(uid) ? "" : "disabled"}>Delete user</button>
           </div>
         `;
-
         frag.appendChild(card);
       }
 
-      // replace DOM in a single operation
       usersList.innerHTML = "";
       usersList.appendChild(frag);
     }
 
-    refreshAdmin.addEventListener("click", () => queueAdminUsersRender());
-    adminSearch.addEventListener("input", () => {
-      if (adminSearchTimer) clearTimeout(adminSearchTimer);
-      adminSearchTimer = setTimeout(() => queueAdminUsersRender(), 90);
-    });
-    clearSearch.addEventListener("click", () => {
-      adminSearch.value = "";
-      if (adminSearchTimer) clearTimeout(adminSearchTimer);
-      queueAdminUsersRender();
-    });
+    const canDeleteUser = (uid) => !!(myProfile?.isAdmin && uid && uid !== me?.uid);
 
-    onAuthStateChanged(auth, async (user) => {
-      cleanupSubs();
-      me = user || null;
-      myProfile = null;
+    async function deleteUserEverywhere(uid) {
+      if (!canDeleteUser(uid)) throw new Error("CANNOT_DELETE_USER");
 
-      // Default: hide sidebar + center until proven admin
-      sideCol.style.display = "none";
-      wrapEl.classList.add("centered");
+      const userRef = doc(db, "users", uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) throw new Error("NO_USER");
 
-      if (!user) {
-        statusEl.textContent = "Signing in…";
-        mePill.textContent = "Not signed in";
-        adminPill.style.display = "none";
-        adminPanel.style.display = "none";
-        signOutTop.style.display = "none";
-        setBlocked(null);
-        await signInAnonymously(auth);
+      const userData = userSnap.data() || {};
+      const usernameKey = userData.usernameKey || null;
+      const targetDeviceId = userData.deviceId || null;
+
+      let batch = writeBatch(db);
+      let ops = 0;
+      const MAX_BATCH_OPS = 400;
+      async function flushBatch() {
+        if (!ops) return;
+        await batch.commit();
+        batch = writeBatch(db);
+        ops = 0;
+      }
+
+      if (usernameKey) { batch.delete(doc(db, "usernames", usernameKey)); ops += 1; }
+      if (targetDeviceId) { batch.delete(doc(db, "bannedDevices", targetDeviceId)); ops += 1; }
+      if (ops >= MAX_BATCH_OPS) await flushBatch();
+
+      while (true) {
+        const msgSnap = await getDocs(query(collection(db, "messages"), where("uid", "==", uid), limit(250)));
+        if (msgSnap.empty) break;
+        for (const msgDoc of msgSnap.docs) {
+          batch.delete(msgDoc.ref);
+          ops += 1;
+          if (ops >= MAX_BATCH_OPS) await flushBatch();
+        }
+        await flushBatch();
+      }
+
+      batch.delete(userRef);
+      ops += 1;
+      await flushBatch();
+    }
+
+    async function waitForProfile(uid, nonce) {
+      const profileRef = doc(db, "users", uid);
+      for (let i = 0; i < 10; i += 1) {
+        const snap = await getDoc(profileRef);
+        if (snap.exists()) return snap;
+        if (nonce !== authSessionNonce) return null;
+        await sleep(250 + i * 80);
+      }
+      return null;
+    }
+
+    function mapAuthError(err, mode) {
+      const code = err?.code || "";
+      if (String(err?.message || "").includes("USERNAME_TAKEN")) return "That username is already taken.";
+      if (String(err?.message || "").includes("DEVICE_BANNED")) return "This device is banned.";
+      if (mode === "login") {
+        if (code === "auth/invalid-credential" || code === "auth/user-not-found" || code === "auth/wrong-password") return "Invalid username or password.";
+        if (code === "auth/too-many-requests") return "Too many login attempts. Try again later.";
+      }
+      if (mode === "register") {
+        if (code === "auth/email-already-in-use") return "That username is already taken.";
+        if (code === "auth/weak-password") return "Password is too weak. Use at least 8 characters.";
+      }
+      if (code === "permission-denied") return "Permission denied by Firestore rules.";
+      return err?.message || "Something went wrong.";
+    }
+
+    async function ensureDeviceNotBanned() {
+      const banSnap = await getDoc(doc(db, "bannedDevices", deviceId));
+      return !(banSnap.exists() && banSnap.data()?.banned === true);
+    }
+
+    async function handleLogin() {
+      const username = normalizeUsername(loginUsername.value);
+      const password = loginPassword.value;
+      setAuthError("");
+
+      if (!validateUsername(username)) {
+        setAuthError("Username must be 3-24 chars and use lowercase letters, numbers, dots, underscores, or hyphens.");
+        loginUsername.focus();
+        return;
+      }
+      if (!password) {
+        setAuthError("Password is required.");
+        loginPassword.focus();
         return;
       }
 
-      // device ban check
+      setAuthBusy(true);
       try {
-        const banSnap = await getDoc(doc(db, "bannedDevices", deviceId));
-        if (banSnap.exists() && banSnap.data()?.banned === true) {
-          statusEl.textContent = "Blocked";
-          mePill.textContent = "Banned device";
-          adminPill.style.display = "none";
-          adminPanel.style.display = "none";
-          signOutTop.style.display = "none";
-          setBlocked({ title: "Banned", text: "This device is banned. You cannot rejoin." });
-          return;
-        }
-      } catch (e) { console.error(e); }
-
-      const uref = doc(db, "users", user.uid);
-      const snap = await getDoc(uref);
-
-      if (!snap.exists()) {
-        // Attempt auto-restore from the device cache if uid OR deviceId matches.
-        const restored = await tryAutoRestoreProfile(user.uid);
-        if (restored) {
-          const post = await getDoc(uref);
-          if (post.exists()) {
-            myProfile = post.data();
-            mePill.textContent = "You: " + (myProfile.displayName || "?");
-            saveAccountHints(myProfile);
-            closeNameModal();
-          } else {
-            mePill.textContent = "Choose a name";
-            openNameModal();
-          }
-        } else {
-          mePill.textContent = "Choose a name";
-          openNameModal();
-        }
-      } else {
-        myProfile = snap.data();
-        mePill.textContent = "You: " + (myProfile.displayName || "?");
-        saveAccountHints(myProfile);
-        closeNameModal();
-      }
-
-      unsubProfile = onSnapshot(uref, (s) => {
-        if (!s.exists()) return;
-        myProfile = s.data();
-
-        // Keep local device cache fresh (uid + deviceId + name).
-        saveAccountHints(myProfile);
-
-        mePill.textContent = "You: " + (myProfile.displayName || "?");
-
-        if (myProfile.isAdmin) {
-          adminPill.style.display = "inline-block";
-          adminPanel.style.display = "flex";
-          signOutTop.style.display = "inline-block";
-          sideCol.style.display = "block";
-          wrapEl.classList.remove("centered");
-        } else {
-          adminPill.style.display = "none";
-          adminPanel.style.display = "none";
-          signOutTop.style.display = "none";
-          sideCol.style.display = "none";
-          wrapEl.classList.add("centered");
-        }
-
-        if (myProfile.banned) {
-          setBlocked({ title: "Banned", text: "An admin has banned this account/device." });
-          return;
-        }
-
-        if (myProfile.loggedOut) {
-          setBlocked({ title: "Logged out", text: "An admin logged you out. Ask an admin to clear it." });
-          return;
-        }
-
-        setBlocked(null);
-      });
-
-      unsubUsers = onSnapshot(collection(db, "users"), (qs) => {
-        const prevUserSig = JSON.stringify(Array.from(userCache.entries()));
-        userCache.clear();
-        liveUsers = [];
-
-        qs.forEach((d) => {
-          const u = d.data();
-          const uid = d.id;
-
-          const row = {
-            id: uid,
-            uid: uid,
-            displayName: u.displayName || "",
-            verified: u.verified === true,
-            banned: u.banned === true,
-            loggedOut: u.loggedOut === true,
-            isAdmin: u.isAdmin === true,
-            deviceId: u.deviceId || null,
-            nameKey: u.nameKey || ""
-          };
-
-          liveUsers.push(row);
-
-          userCache.set(uid, {
-            displayName: row.displayName,
-            verified: row.verified,
-            banned: row.banned,
-            loggedOut: row.loggedOut,
-            isAdmin: row.isAdmin,
-            deviceId: row.deviceId
-          });
-        });
-
-        const nextUserSig = JSON.stringify(Array.from(userCache.entries()));
-        const usersChanged = prevUserSig !== nextUserSig;
-
-        if (lastMessagesSnapshot && usersChanged) {
-          renderMessagesFromSnapshot(lastMessagesSnapshot, { forceBottom: !didInitialScroll });
-          didInitialScroll = true;
-        }
-
-        queueAdminUsersRender();
-      });
-
-      const mq = query(collection(db, "messages"), orderBy("createdAt"), limitToLast(200));
-      unsubMessages = onSnapshot(mq, (qs) => {
-        lastMessagesSnapshot = qs;
-
-        // ✅ forceBottom ONLY for very first message load
-        renderMessagesFromSnapshot(qs, { forceBottom: true });
-        didInitialScroll = true;
-        scrollToBottomNow();
-      });
-
-      statusEl.textContent = "Live";
-    });
-
-    async function saveName() {
-      if (!me) return;
-
-      const { display, key } = normalizeName(displayNameEl.value);
-
-      setErr("");
-      if (!display) return setErr("Name required.");
-      if (display.length < 2) return setErr("Name too short.");
-      if (display.length > 24) return setErr("Name too long.");
-
-      saveNameBtn.disabled = true;
-
-      try {
-        const uref = doc(db, "users", me.uid);
-        const nref = doc(db, "usernames", key);
-
-        await runTransaction(db, async (tx) => {
-          const nSnap = await tx.get(nref);
-          if (nSnap.exists()) throw new Error("NAME_TAKEN");
-
-          const uSnap = await tx.get(uref);
-          const existing = uSnap.exists() ? uSnap.data() : null;
-
-          tx.set(nref, { uid: me.uid, displayName: display, createdAt: serverTimestamp() });
-
-          tx.set(uref, {
-            uid: me.uid,
-            displayName: display,
-            nameKey: key,
-            deviceId: deviceId,
-            verified: false,
-            banned: false,
-            loggedOut: false,
-            isAdmin: false,
-            createdAt: existing?.createdAt || serverTimestamp()
-          }, { merge: true });
-        });
-
-        // Persist account hints locally (cookie + uid + deviceId + best-effort IP)
-        saveAccountHints({ displayName: display, nameKey: key });
-
-        closeNameModal();
-        showToast("Created. Waiting for verify.");
-      } catch (e) {
-        console.error(e);
-        if (String(e?.message || "").includes("NAME_TAKEN")) setErr("That name is already taken.");
-        else setErr("Couldn’t create account. Check console.");
+        await signInWithEmailAndPassword(auth, makeLoginEmail(username), password);
+        loginPassword.value = "";
+        showToast("Signed in", "ok");
+      } catch (err) {
+        console.error(err);
+        setAuthError(mapAuthError(err, "login"));
       } finally {
-        saveNameBtn.disabled = false;
+        setAuthBusy(false);
       }
     }
 
-    saveNameBtn.addEventListener("click", saveName);
-    displayNameEl.addEventListener("keydown", (e) => { if (e.key === "Enter") saveName(); });
+    async function handleRegister() {
+      const username = normalizeUsername(registerUsername.value);
+      const displayName = username;
+      const password = registerPassword.value;
 
-    signOutBtn.addEventListener("click", () => closeNameModal());
+      setAuthError("");
+      if (!validateUsername(username)) { setAuthError("Username must be 3-24 chars and use lowercase letters, numbers, dots, underscores, or hyphens."); registerUsername.focus(); return; }
+      if (!validateDisplayName(displayName)) { setAuthError("Username must be at least 2 characters."); registerUsername.focus(); return; }
+      if (!validatePassword(password)) { setAuthError("Password must be between 8 and 72 characters."); registerPassword.focus(); return; }
 
-    blockedSignOut.addEventListener("click", async () => {
-      try { await signOut(auth); } catch (e) { console.error(e); }
-    });
+      setAuthBusy(true);
+      let createdUser = null;
+      try {
+        const credential = await createUserWithEmailAndPassword(auth, makeLoginEmail(username), password);
+        createdUser = credential.user;
 
-    signOutTop.addEventListener("click", async () => {
-      if (myProfile?.isAdmin) await signOut(auth);
-    });
+        const allowed = await ensureDeviceNotBanned();
+        if (!allowed) throw new Error("DEVICE_BANNED");
 
-    async function send() {
-      if (!me) return;
-      if (!myProfile?.displayName) return openNameModal();
-      if (myProfile.banned || myProfile.loggedOut) return;
+        const userRef = doc(db, "users", createdUser.uid);
+        const usernameRef = doc(db, "usernames", username);
+
+        await runTransaction(db, async (tx) => {
+          const usernameSnap = await tx.get(usernameRef);
+          if (usernameSnap.exists() && usernameSnap.data()?.uid !== createdUser.uid) throw new Error("USERNAME_TAKEN");
+
+          const existingSnap = await tx.get(userRef);
+          const existing = existingSnap.exists() ? existingSnap.data() : null;
+
+          tx.set(usernameRef, {
+            uid: createdUser.uid,
+            usernameKey: username,
+            createdAt: existing?.createdAt || serverTimestamp()
+          }, { merge: true });
+
+          tx.set(userRef, {
+            uid: createdUser.uid,
+            usernameKey: username,
+            displayName,
+            deviceId,
+            verified: existing?.verified === true,
+            banned: false,
+            loggedOut: false,
+            isAdmin: existing?.isAdmin === true,
+            createdAt: existing?.createdAt || serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        });
+
+        registerPassword.value = "";
+        showToast("Account created", "ok");
+      } catch (err) {
+        console.error(err);
+        if (createdUser && (String(err?.message || "").includes("USERNAME_TAKEN") || String(err?.message || "").includes("DEVICE_BANNED"))) {
+          try { await deleteUser(createdUser); } catch (rollbackErr) { console.error("Could not rollback auth user", rollbackErr); }
+        }
+        setAuthError(mapAuthError(err, "register"));
+      } finally {
+        setAuthBusy(false);
+      }
+    }
+
+    async function sendMessage() {
+      if (!me || !myProfile) return;
+      if (profileBlockReason(myProfile)) return;
 
       const text = messageInput.value.trim();
       if (!text) return;
@@ -1544,213 +790,299 @@
           text,
           createdAt: serverTimestamp()
         });
-        scrollToBottomNow();
         messageInput.value = "";
-        setTypingState(false);
-      } catch (e) {
-        console.error(e);
-        showToast("Send failed (rules?)");
+        updateCharCount();
+        scrollToBottom();
+      } catch (err) {
+        console.error(err);
+        showToast("Message failed. Check Firestore rules.", "danger");
       } finally {
-        sendBtn.disabled = false;
-        messageInput.focus();
+        if (!messageInput.disabled) {
+          sendBtn.disabled = false;
+          messageInput.focus();
+        }
       }
     }
+    loginForm.addEventListener("submit", async (event) => { event.preventDefault(); await handleLogin(); });
+    registerForm.addEventListener("submit", async (event) => { event.preventDefault(); await handleRegister(); });
+    tabLogin.addEventListener("click", () => setAuthMode("login"));
+    tabRegister.addEventListener("click", () => setAuthMode("register"));
 
-    sendBtn.addEventListener("click", send);
-    messageInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+    signOutTop.addEventListener("click", async () => {
+      try { await signOut(auth); }
+      catch (err) { console.error(err); showToast("Sign out failed", "danger"); }
     });
-    messageInput.addEventListener("input", pulseTypingState);
-    messageInput.addEventListener("focus", pulseTypingState);
-    messageInput.addEventListener("blur", () => {
-      if (!messageInput.value.trim()) setTypingState(false);
+
+    blockedSignOut.addEventListener("click", async () => {
+      try { await signOut(auth); }
+      catch (err) { console.error(err); showToast("Sign out failed", "danger"); }
     });
-    usersList.addEventListener("keydown", async (e) => {
-      const target = e.target;
+
+    sendBtn.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); }
+    });
+    messageInput.addEventListener("input", () => updateCharCount());
+
+    refreshAdmin.addEventListener("click", () => queueAdminUsersRender());
+    adminSearch.addEventListener("input", () => {
+      if (adminSearchTimer) clearTimeout(adminSearchTimer);
+      adminSearchTimer = setTimeout(() => queueAdminUsersRender(), 100);
+    });
+    clearSearch.addEventListener("click", () => {
+      adminSearch.value = "";
+      if (adminSearchTimer) clearTimeout(adminSearchTimer);
+      queueAdminUsersRender();
+    });
+
+    usersList.addEventListener("keydown", (event) => {
+      const target = event.target;
       if (!(target instanceof HTMLInputElement)) return;
-      if (e.key !== "Enter") return;
-      const uid = target.getAttribute("data-rename");
+      if (event.key !== "Enter") return;
+      const uid = target.getAttribute("data-rename-display");
       if (!uid) return;
-      e.preventDefault();
-      const btn = usersList.querySelector(`[data-renbtn="${uid}"]`);
-      btn?.click();
+      event.preventDefault();
+      const saveButton = usersList.querySelector(`[data-save-display="${uid}"]`);
+      saveButton?.click();
     });
 
-    document.addEventListener("click", async (e) => {
-      const t = e.target;
-      if (!(t instanceof HTMLElement)) return;
+    document.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
 
-      const delId = t.getAttribute("data-delmsg");
-      if (delId && myProfile?.isAdmin) {
-        try {
-          await deleteDoc(doc(db, "messages", delId));
-          showToast("Message deleted");
-        } catch (err) {
-          console.error(err);
-          showToast("Delete failed");
-        }
+      const messageId = target.getAttribute("data-delmsg");
+      if (messageId && myProfile?.isAdmin) {
+        try { await deleteDoc(doc(db, "messages", messageId)); showToast("Message deleted", "ok"); }
+        catch (err) { console.error(err); showToast("Delete failed", "danger"); }
         return;
       }
 
       if (!myProfile?.isAdmin) return;
 
-      const vUid = t.getAttribute("data-verify");
-      if (vUid) {
-        const val = t.getAttribute("data-verifyval") === "1";
-        try {
-          await updateDoc(doc(db, "users", vUid), { verified: val });
-          showToast(val ? "Verified" : "Unverified");
-        } catch (err) {
-          console.error(err);
-          showToast("Verify failed");
-        }
+      const verifyUid = target.getAttribute("data-verify");
+      if (verifyUid) {
+        const value = target.getAttribute("data-verifyval") === "1";
+        try { await updateDoc(doc(db, "users", verifyUid), { verified: value, updatedAt: serverTimestamp() }); showToast(value ? "User verified" : "User unverified", "ok"); }
+        catch (err) { console.error(err); showToast("Verify failed", "danger"); }
         return;
       }
 
-      const clrUid = t.getAttribute("data-clearlogout");
-      if (clrUid) {
-        try {
-          // try update first; if user doc doesn't exist or update fails, fall back to set with merge
-          try {
-            await updateDoc(doc(db, "users", clrUid), { loggedOut: false });
-          } catch (innerErr) {
-            // fallback: create/merge the field (useful if doc was missing)
-            await setDoc(doc(db, "users", clrUid), { loggedOut: false }, { merge: true });
-          }
-          showToast("Logout cleared");
-        } catch (err) {
-          console.error(err);
-          showToast("Clear logout failed");
-        }
-        return;
-      }
-
-      const logoutUid = t.getAttribute("data-logout");
+      const logoutUid = target.getAttribute("data-logout");
       if (logoutUid) {
-        try {
-          await updateDoc(doc(db, "users", logoutUid), { loggedOut: true });
-          showToast("Forced logout");
-        } catch (err) {
-          console.error(err);
-          showToast("Force logout failed");
-        }
+        try { await updateDoc(doc(db, "users", logoutUid), { loggedOut: true, updatedAt: serverTimestamp() }); showToast("Force logout applied", "ok"); }
+        catch (err) { console.error(err); showToast("Force logout failed", "danger"); }
         return;
       }
 
-      const adminUid = t.getAttribute("data-setadmin");
+      const clearLogoutUid = target.getAttribute("data-clearlogout");
+      if (clearLogoutUid) {
+        try { await updateDoc(doc(db, "users", clearLogoutUid), { loggedOut: false, updatedAt: serverTimestamp() }); showToast("Logout flag cleared", "ok"); }
+        catch (err) { console.error(err); showToast("Clear logout failed", "danger"); }
+        return;
+      }
+
+      const adminUid = target.getAttribute("data-setadmin");
       if (adminUid) {
-        const makeAdmin = t.getAttribute("data-setadminval") === "1";
-        try {
-          await updateDoc(doc(db, "users", adminUid), { isAdmin: makeAdmin });
-          showToast(makeAdmin ? "Admin granted" : "Admin removed");
-        } catch (err) {
-          console.error(err);
-          showToast("Admin change failed");
-        }
+        const makeAdmin = target.getAttribute("data-setadminval") === "1";
+        try { await updateDoc(doc(db, "users", adminUid), { isAdmin: makeAdmin, updatedAt: serverTimestamp() }); showToast(makeAdmin ? "Admin granted" : "Admin removed", "ok"); }
+        catch (err) { console.error(err); showToast("Admin update failed", "danger"); }
         return;
       }
 
-      const banUid = t.getAttribute("data-ban");
+      const banUid = target.getAttribute("data-ban");
       if (banUid) {
-        const willBan = t.getAttribute("data-banval") === "1";
+        const willBan = target.getAttribute("data-banval") === "1";
         try {
-          const targetSnap = await getDoc(doc(db, "users", banUid));
-          const target = targetSnap.exists() ? targetSnap.data() : null;
-          const tDevice = target?.deviceId;
+          const userSnap = await getDoc(doc(db, "users", banUid));
+          const userData = userSnap.exists() ? userSnap.data() : null;
+          const targetDeviceId = userData?.deviceId || null;
 
           await updateDoc(doc(db, "users", banUid), {
             banned: willBan,
-            loggedOut: willBan ? true : false
+            loggedOut: willBan,
+            updatedAt: serverTimestamp()
           });
 
-          if (tDevice) {
-            const dref = doc(db, "bannedDevices", tDevice);
+          if (targetDeviceId) {
+            const banRef = doc(db, "bannedDevices", targetDeviceId);
             if (willBan) {
-              await setDoc(dref, { banned: true, uid: banUid, bannedAt: serverTimestamp() }, { merge: true });
+              await setDoc(banRef, { banned: true, uid: banUid, deviceId: targetDeviceId, bannedAt: serverTimestamp() }, { merge: true });
             } else {
-              await deleteDoc(dref);
+              await deleteDoc(banRef);
             }
           }
 
-          showToast(willBan ? "User banned" : "User unbanned");
+          showToast(willBan ? "User banned" : "User unbanned", "ok");
         } catch (err) {
           console.error(err);
-          showToast("Ban/unban failed");
+          showToast("Ban operation failed", "danger");
         }
         return;
       }
 
-      const deleteUserUid = t.getAttribute("data-deleteuser");
-      if (deleteUserUid) {
-        if (!canDeleteUser(deleteUserUid)) {
-          showToast("You can’t delete this user");
-          return;
-        }
+      const deleteUid = target.getAttribute("data-deleteuser");
+      if (deleteUid) {
+        if (!canDeleteUser(deleteUid)) { showToast("You cannot delete this user", "danger"); return; }
 
-        const target = liveUsers.find((u) => (u.uid || u.id) === deleteUserUid);
-        const label = target?.displayName || "this user";
+        const targetRow = liveUsers.find((u) => u.uid === deleteUid);
+        const label = targetRow?.displayName || targetRow?.usernameKey || deleteUid;
         const ok = window.confirm(`Delete ${label} from users, usernames, messages, and device bans? This cannot be undone.`);
         if (!ok) return;
 
-        try {
-          t.disabled = true;
-          await deleteUserEverywhere(deleteUserUid);
-          showToast("User deleted");
-        } catch (err) {
-          console.error(err);
-          showToast("Delete user failed");
-        } finally {
-          t.disabled = false;
-        }
+        try { target.disabled = true; await deleteUserEverywhere(deleteUid); showToast("User deleted", "ok"); }
+        catch (err) { console.error(err); showToast("Delete user failed", "danger"); }
+        finally { target.disabled = false; }
         return;
       }
 
-      const renUid = t.getAttribute("data-renbtn");
-      if (renUid) {
-        const input = usersList.querySelector(`[data-rename="${renUid}"]`);
-        const { display, key } = normalizeName(input?.value || "");
-        if (!display) { showToast("Enter a name"); input?.focus(); return; }
-        if (display.length < 2 || display.length > 24) { showToast("Name must be 2–24"); input?.focus(); return; }
-
-        const uref = doc(db, "users", renUid);
-        const newNameRef = doc(db, "usernames", key);
+      const renameUid = target.getAttribute("data-save-display");
+      if (renameUid) {
+        const input = usersList.querySelector(`[data-rename-display="${renameUid}"]`);
+        const displayName = normalizeDisplayName(input?.value || "");
+        if (!validateDisplayName(displayName)) { showToast("Display name must be 2-32 characters", "danger"); input?.focus(); return; }
 
         try {
-          t.disabled = true;
-          await runTransaction(db, async (tx) => {
-            const uSnap = await tx.get(uref);
-            if (!uSnap.exists()) throw new Error("NO_USER");
-            const u = uSnap.data();
-            const oldKey = u.nameKey;
+          target.disabled = true;
+          await updateDoc(doc(db, "users", renameUid), { displayName, updatedAt: serverTimestamp() });
+          if (input) input.value = displayName;
+          showToast("Display name updated", "ok");
+        } catch (err) {
+          console.error(err);
+          showToast("Rename failed", "danger");
+        } finally {
+          target.disabled = false;
+        }
+      }
+    });
 
-            if (oldKey !== key) {
-              const taken = await tx.get(newNameRef);
-              if (taken.exists() && taken.data()?.uid !== renUid) throw new Error("NAME_TAKEN");
+    onAuthStateChanged(auth, async (user) => {
+      const nonce = ++authSessionNonce;
+      clearSubscriptions();
+      me = user || null;
+      myProfile = null;
 
-              tx.set(newNameRef, { uid: renUid, displayName: display, createdAt: serverTimestamp() }, { merge: true });
-              if (oldKey && oldKey !== key) tx.delete(doc(db, "usernames", oldKey));
-            }
+      if (!user) {
+        setStatus("Signed out");
+        resetSignedOutUi();
+        openAuthModal("login");
+        return;
+      }
 
-            tx.set(uref, { displayName: display, nameKey: key }, { merge: true });
+      closeAuthModal();
+      signOutTop.style.display = "inline-block";
+      setStatus("Checking account...");
+      setComposerEnabled(false);
+
+      try {
+        const allowed = await ensureDeviceNotBanned();
+        if (nonce !== authSessionNonce) return;
+        if (!allowed) {
+          mePill.textContent = "Blocked device";
+          setStatus("Blocked");
+          layout.classList.add("centered");
+          adminCol.style.display = "none";
+          adminPill.style.display = "none";
+          setBlocked({ title: "Device banned", text: "This device is banned and cannot use chat." });
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+
+      const profileSnap = await waitForProfile(user.uid, nonce);
+      if (nonce !== authSessionNonce) return;
+
+      if (!profileSnap?.exists()) {
+        myProfile = null;
+        updateHeaderIdentity();
+        applyRoleUi();
+        setStatus("Profile missing");
+        setBlocked(profileBlockReason(null));
+        return;
+      }
+
+      myProfile = profileSnap.data();
+      updateHeaderIdentity();
+      applyRoleUi();
+      const initialBlock = profileBlockReason(myProfile);
+      setBlocked(initialBlock);
+      setStatus(initialBlock ? "Blocked" : "Live");
+
+      const userRef = doc(db, "users", user.uid);
+
+      unsubProfile = onSnapshot(userRef, (snap) => {
+        if (!snap.exists()) {
+          myProfile = null;
+          updateHeaderIdentity();
+          applyRoleUi();
+          setBlocked(profileBlockReason(null));
+          setStatus("Profile missing");
+          return;
+        }
+
+        myProfile = snap.data();
+        updateHeaderIdentity();
+        applyRoleUi();
+
+        const block = profileBlockReason(myProfile);
+        setBlocked(block);
+        setStatus(block ? "Blocked" : "Live");
+
+        if (lastMessagesSnapshot) renderMessages(lastMessagesSnapshot, false);
+        queueAdminUsersRender();
+      }, (err) => {
+        console.error(err);
+        setStatus("Profile listener failed");
+      });
+
+      unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+        const prevSig = JSON.stringify(Array.from(userCache.entries()));
+        userCache.clear();
+        liveUsers = [];
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() || {};
+          const row = {
+            uid: docSnap.id,
+            usernameKey: data.usernameKey || data.nameKey || "",
+            displayName: data.displayName || data.usernameKey || data.nameKey || "",
+            verified: data.verified === true,
+            banned: data.banned === true,
+            loggedOut: data.loggedOut === true,
+            isAdmin: data.isAdmin === true,
+            deviceId: data.deviceId || null
+          };
+
+          liveUsers.push(row);
+          userCache.set(docSnap.id, {
+            usernameKey: row.usernameKey,
+            displayName: row.displayName,
+            verified: row.verified,
+            banned: row.banned,
+            loggedOut: row.loggedOut,
+            isAdmin: row.isAdmin,
+            deviceId: row.deviceId
           });
+        });
 
-          if (input) input.value = display;
-          showToast("Username changed");
-        } catch (err) {
-          console.error(err);
-          if (String(err?.message || "").includes("NAME_TAKEN")) showToast("Name taken");
-          else showToast("Rename failed");
-        } finally {
-          t.disabled = false;
-        }
-        return;
-      }
+        const nextSig = JSON.stringify(Array.from(userCache.entries()));
+        if (prevSig !== nextSig && lastMessagesSnapshot) renderMessages(lastMessagesSnapshot, false);
+        queueAdminUsersRender();
+      }, (err) => {
+        console.error(err);
+      });
+
+      const messagesQuery = query(collection(db, "messages"), orderBy("createdAt"), limitToLast(200));
+      unsubMessages = onSnapshot(messagesQuery, (snapshot) => {
+        lastMessagesSnapshot = snapshot;
+        renderMessages(snapshot, true);
+      }, (err) => {
+        console.error(err);
+        showToast("Messages listener failed", "danger");
+      });
     });
 
-    const adminObserver = new MutationObserver(() => {
-      if (adminPanel.style.display !== "none" && myProfile?.isAdmin) queueAdminUsersRender();
-    });
-    adminObserver.observe(adminPanel, { attributes: true, attributeFilter: ["style"] });
+    updateCharCount();
   </script>
 </body>
 </html>
