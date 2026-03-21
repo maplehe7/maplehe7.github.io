@@ -214,7 +214,8 @@
       addDoc,
       runTransaction,
       serverTimestamp,
-      getDocs
+      getDocs,
+      writeBatch
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -614,6 +615,16 @@
 
     const canDeleteUser = (uid) => !!(isAdminUser() && uid && uid !== me?.uid);
 
+    async function deleteRefsInRuleSafeBatches(refs) {
+      const RULE_SAFE_BATCH_SIZE = 8;
+      for (let i = 0; i < refs.length; i += RULE_SAFE_BATCH_SIZE) {
+        const batch = writeBatch(db);
+        const slice = refs.slice(i, i + RULE_SAFE_BATCH_SIZE);
+        for (const ref of slice) batch.delete(ref);
+        await batch.commit();
+      }
+    }
+
     async function deleteUserEverywhere(uid) {
       if (!canDeleteUser(uid)) throw new Error("CANNOT_DELETE_USER");
 
@@ -625,17 +636,15 @@
       const usernameKey = userData.usernameKey || userData.nameKey || null;
       const targetDeviceId = userData.deviceId || null;
 
-      // Keep deletes as single writes so Firestore rule evaluation stays under
-      // request limits when rules call get()/exists() helpers.
-      if (usernameKey) await deleteDoc(doc(db, "usernames", usernameKey));
-      if (targetDeviceId) await deleteDoc(doc(db, "bannedDevices", targetDeviceId));
+      const firstRefs = [];
+      if (usernameKey) firstRefs.push(doc(db, "usernames", usernameKey));
+      if (targetDeviceId) firstRefs.push(doc(db, "bannedDevices", targetDeviceId));
+      if (firstRefs.length) await deleteRefsInRuleSafeBatches(firstRefs);
 
       while (true) {
-        const msgSnap = await getDocs(query(collection(db, "messages"), where("uid", "==", uid), limit(100)));
+        const msgSnap = await getDocs(query(collection(db, "messages"), where("uid", "==", uid), limit(120)));
         if (msgSnap.empty) break;
-        for (const msgDoc of msgSnap.docs) {
-          await deleteDoc(msgDoc.ref);
-        }
+        await deleteRefsInRuleSafeBatches(msgSnap.docs.map((d) => d.ref));
       }
 
       await deleteDoc(userRef);
