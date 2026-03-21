@@ -214,8 +214,7 @@
       addDoc,
       runTransaction,
       serverTimestamp,
-      getDocs,
-      writeBatch
+      getDocs
     } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -626,34 +625,20 @@
       const usernameKey = userData.usernameKey || userData.nameKey || null;
       const targetDeviceId = userData.deviceId || null;
 
-      let batch = writeBatch(db);
-      let ops = 0;
-      const MAX_BATCH_OPS = 400;
-      async function flushBatch() {
-        if (!ops) return;
-        await batch.commit();
-        batch = writeBatch(db);
-        ops = 0;
-      }
-
-      if (usernameKey) { batch.delete(doc(db, "usernames", usernameKey)); ops += 1; }
-      if (targetDeviceId) { batch.delete(doc(db, "bannedDevices", targetDeviceId)); ops += 1; }
-      if (ops >= MAX_BATCH_OPS) await flushBatch();
+      // Keep deletes as single writes so Firestore rule evaluation stays under
+      // request limits when rules call get()/exists() helpers.
+      if (usernameKey) await deleteDoc(doc(db, "usernames", usernameKey));
+      if (targetDeviceId) await deleteDoc(doc(db, "bannedDevices", targetDeviceId));
 
       while (true) {
-        const msgSnap = await getDocs(query(collection(db, "messages"), where("uid", "==", uid), limit(250)));
+        const msgSnap = await getDocs(query(collection(db, "messages"), where("uid", "==", uid), limit(100)));
         if (msgSnap.empty) break;
         for (const msgDoc of msgSnap.docs) {
-          batch.delete(msgDoc.ref);
-          ops += 1;
-          if (ops >= MAX_BATCH_OPS) await flushBatch();
+          await deleteDoc(msgDoc.ref);
         }
-        await flushBatch();
       }
 
-      batch.delete(userRef);
-      ops += 1;
-      await flushBatch();
+      await deleteDoc(userRef);
     }
 
     async function waitForProfile(uid, nonce) {
